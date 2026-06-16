@@ -1,0 +1,11 @@
+# Voir les 50 dernières lignes de tous les logs
+.\view-logs.ps1
+
+# Voir les 30 dernières lignes des erreurs
+.\view-logs.ps1 -LogType errors -Lines 30
+
+# Surveillance en temps réel de laravel.log
+.\view-logs.ps1 -LogType watch
+
+# Surveillance en temps réel des erreurs
+.\view-logs.ps1 -LogType watch-errors

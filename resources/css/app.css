@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Styles pour les dropdowns - survol adaptatif */
+.dropdown-item {
+    transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background-color: #F3F4F6 !important;
+    color: #D4AF37 !important;
+}
+
+/* Mode sombre */
+body.dark .dropdown-item {
+    background-color: #1F2937;
+    color: #9CA3AF;
+}
+
+body.dark .dropdown-item:hover {
+    background-color: #374151 !important;
+    color: #D4AF37 !important;
+}
+
+/* Classes pour les hover en mode sombre/clair */
+.hover-bg {
+    transition: all 0.2s ease;
+}
+
+.hover-bg:hover {
+    background-color: #F3F4F6;
+}
+
+body.dark .hover-bg:hover {
+    background-color: #374151;
+}
+
+/* Pour les liens dans les dropdowns */
+.dropdown-link {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    color: var(--color-nav-text);
+}
+
+.dropdown-link:hover {
+    background-color: #F3F4F6;
+    color: var(--color-primary);
+}
+
+body.dark .dropdown-link:hover {
+    background-color: #374151;
+    color: var(--color-primary);
+}
