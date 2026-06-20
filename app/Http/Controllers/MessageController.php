@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Message;
 use App\Models\Annonce;
 use App\Models\User;
+use App\Models\Commande;
 use App\Models\MessagePieceJointe;
 use App\Services\MessageLogger;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
 use Throwable;
 
 class MessageController extends Controller
@@ -79,11 +81,47 @@ class MessageController extends Controller
     {
         try {
             $currentUserId = Auth::id();
-            
+
             $otherUser = User::findOrFail($userId);
 
+            // Charger TOUTES les relations nécessaires pour l'affichage complet
             $messages = Message::conversation($currentUserId, $userId)
-                ->with(['expediteur', 'destinataire', 'annonce', 'piecesJointes', 'reponseA.expediteur'])
+                ->with([
+                    'expediteur',
+                    'destinataire',
+                    'annonce' => function($query) {
+                        $query->with([
+                            'piecesJointes',
+                            'auteur',
+                            'animal' => function($q) {
+                                $q->with('race');
+                            },
+                            'nourriture',
+                            'accessoire',
+                            'escrement'
+                        ]);
+                    },
+                    'commande' => function($query) {
+                        $query->with([
+                            'acheteur',
+                            'vendeur',
+                            'annonce' => function($q) {
+                                $q->with([
+                                    'piecesJointes',
+                                    'auteur',
+                                    'animal.race',
+                                    'nourriture',
+                                    'accessoire',
+                                    'escrement'
+                                ]);
+                            }
+                        ]);
+                    },
+                    'piecesJointes',
+                    'reponseA' => function($query) {
+                        $query->with('expediteur');
+                    }
+                ])
                 ->orderBy('created_at', 'asc')
                 ->get();
 
@@ -94,11 +132,20 @@ class MessageController extends Controller
                 ->where('id_expediteur', $userId)
                 ->update(['lu' => true]);
 
+            // Récupérer l'annonce du premier message de la conversation pour l'affichage
             $annonce = null;
             if ($messages->isNotEmpty()) {
                 $firstMessage = $messages->first();
                 if ($firstMessage->id_annonce) {
-                    $annonce = Annonce::with(['auteur', 'piecesJointes'])->find($firstMessage->id_annonce);
+                    $annonce = Annonce::with([
+                        'auteur',
+                        'piecesJointes',
+                        'animal',
+                        'animal.race',
+                        'nourriture',
+                        'accessoire',
+                        'escrement'
+                    ])->find($firstMessage->id_annonce);
                 }
             }
 
@@ -174,18 +221,26 @@ class MessageController extends Controller
 
             DB::beginTransaction();
 
-            // Créer le message
-            $message = Message::create([
+            // Créer le message - NE PAS inclure id_annonce sauf si explicitement passé
+            $messageData = [
                 'id_expediteur' => Auth::id(),
                 'id_destinataire' => $request->id_destinataire,
-                'id_annonce' => $request->id_annonce,
                 'contenu' => trim($request->contenu ?? ''),
                 'date_envoi' => now(),
                 'est_reponse' => !empty($request->reponse_a_id),
                 'reponse_a_id' => $request->reponse_a_id,
                 'lu' => false,
                 'has_pieces_jointes' => false,
-            ]);
+                'est_demande_commande' => false,
+                'est_demande_paiement' => false,
+            ];
+
+            // Ajouter id_annonce SEULEMENT s'il est présent dans la requête
+            if ($request->has('id_annonce') && !empty($request->id_annonce)) {
+                $messageData['id_annonce'] = $request->id_annonce;
+            }
+
+            $message = Message::create($messageData);
 
             $hasPieces = false;
             $uploadedFiles = [];
@@ -230,7 +285,20 @@ class MessageController extends Controller
             DB::commit();
 
             // Charger le message avec ses relations
-            $message->load(['expediteur', 'piecesJointes', 'reponseA.expediteur']);
+            $message->load([
+                'expediteur', 
+                'piecesJointes', 
+                'reponseA.expediteur',
+                'annonce',
+                'annonce.piecesJointes',
+                'annonce.auteur',
+                'annonce.animal',
+                'annonce.animal.race',
+                'annonce.nourriture',
+                'annonce.accessoire',
+                'annonce.escrement',
+                'commande'
+            ]);
 
             // Journaliser le succès
             $filesInfo = !empty($uploadedFiles) ? implode(', ', $uploadedFiles) : 'Aucun fichier';
@@ -238,6 +306,7 @@ class MessageController extends Controller
                 'files' => $filesInfo,
                 'has_audio' => $hasAudio,
                 'has_video' => $hasVideo,
+                'has_annonce' => !empty($message->id_annonce),
                 'info' => "Message envoyé à l'utilisateur ID={$request->id_destinataire}"
             ]);
 
@@ -249,13 +318,13 @@ class MessageController extends Controller
                 'message' => 'Message envoyé avec succès !',
                 'html' => $html,
                 'message_id' => $message->id,
-                'created_at' => $message->created_at->format('d/m/Y H:i')
+                'created_at' => $message->created_at->format('d/m/Y H:i'),
+                'has_annonce' => !empty($message->id_annonce)
             ]);
 
         } catch (Throwable $e) {
             DB::rollBack();
             
-            // Journaliser l'erreur
             MessageLogger::logError('ENVOI_MESSAGE', $message, $e, [
                 'receiver_id' => $request->id_destinataire ?? 'inconnu',
                 'has_content' => !empty(trim($request->contenu ?? '')),
@@ -387,17 +456,15 @@ class MessageController extends Controller
     }
 
     /**
-     * Optimiser une image avec Intervention Image - Version corrigée
+     * Optimiser une image avec GD
      */
     private function optimizeImage($file, string $path): void
     {
         try {
-            // Vérifier si l'extension GD est disponible
             if (!extension_loaded('gd')) {
                 throw new \Exception('L\'extension GD n\'est pas chargée');
             }
 
-            // Charger l'image avec GD directement pour éviter les problèmes de compatibilité
             $imageInfo = getimagesize($file->getRealPath());
             if (!$imageInfo) {
                 throw new \Exception('Impossible de lire l\'image');
@@ -406,14 +473,12 @@ class MessageController extends Controller
             $mimeType = $imageInfo['mime'];
             $source = null;
 
-            // Créer la ressource image selon le type MIME
             switch ($mimeType) {
                 case 'image/jpeg':
                     $source = imagecreatefromjpeg($file->getRealPath());
                     break;
                 case 'image/png':
                     $source = imagecreatefrompng($file->getRealPath());
-                    // Préserver la transparence pour PNG
                     imagealphablending($source, true);
                     imagesavealpha($source, true);
                     break;
@@ -446,7 +511,6 @@ class MessageController extends Controller
             $width = imagesx($source);
             $height = imagesy($source);
 
-            // Redimensionner si nécessaire
             $maxWidth = 1920;
             $maxHeight = 1080;
             $newWidth = $width;
@@ -459,7 +523,6 @@ class MessageController extends Controller
 
                 $resized = imagecreatetruecolor($newWidth, $newHeight);
                 
-                // Préserver la transparence pour PNG
                 if ($mimeType === 'image/png') {
                     imagealphablending($resized, false);
                     imagesavealpha($resized, true);
@@ -470,20 +533,11 @@ class MessageController extends Controller
                 imagecopyresampled($resized, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
                 imagedestroy($source);
                 $source = $resized;
-                $width = $newWidth;
-                $height = $newHeight;
-
-                MessageLogger::logSuccess('OPTIMISATION_IMAGE', null, [
-                    'info' => "Image redimensionnée de {$width}x{$height} à {$newWidth}x{$newHeight}"
-                ]);
             }
 
-            // Compression selon le type
             $extension = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
             $quality = 85;
-            $output = null;
 
-            // Créer un buffer de sortie
             ob_start();
 
             switch ($extension) {
@@ -492,9 +546,7 @@ class MessageController extends Controller
                     imagejpeg($source, null, $quality);
                     break;
                 case 'png':
-                    // Pour PNG, qualité = niveau de compression (0-9)
-                    $compression = 6;
-                    imagepng($source, null, $compression);
+                    imagepng($source, null, 6);
                     break;
                 case 'gif':
                     imagegif($source, null);
@@ -503,7 +555,6 @@ class MessageController extends Controller
                     if (function_exists('imagewebp')) {
                         imagewebp($source, null, $quality);
                     } else {
-                        // Fallback vers JPEG si WebP n'est pas supporté
                         imagejpeg($source, null, $quality);
                     }
                     break;
@@ -519,35 +570,21 @@ class MessageController extends Controller
                 throw new \Exception('Échec de l\'encodage de l\'image');
             }
 
-            // Sauvegarder l'image
             Storage::disk('public')->put($path, $imageData);
 
             if (!Storage::disk('public')->exists($path)) {
                 throw new \Exception("Échec de l'enregistrement de l'image optimisée: {$path}");
             }
 
-            $newSize = Storage::disk('public')->size($path);
-            $originalSize = $file->getSize();
-
-            MessageLogger::logSuccess('OPTIMISATION_IMAGE', null, [
-                'info' => "Image optimisée: " . number_format($newSize / 1024, 1) . " KB (original: " . number_format($originalSize / 1024, 1) . " KB)"
-            ]);
-
         } catch (Throwable $e) {
             MessageLogger::logError('OPTIMISATION_IMAGE', null, $e, [
                 'path' => $path,
-                'file_name' => $file->getClientOriginalName(),
-                'file_size' => $file->getSize()
+                'file_name' => $file->getClientOriginalName()
             ]);
             
-            // Fallback : sauvegarder l'image sans optimisation
             try {
                 $content = file_get_contents($file->getRealPath());
                 Storage::disk('public')->put($path, $content);
-                
-                MessageLogger::logSuccess('OPTIMISATION_IMAGE', null, [
-                    'info' => "Image sauvegardée sans optimisation (fallback)"
-                ]);
             } catch (Throwable $e2) {
                 MessageLogger::logError('OPTIMISATION_IMAGE_FALLBACK', null, $e2, [
                     'path' => $path
@@ -714,66 +751,332 @@ class MessageController extends Controller
     {
         $currentUserId = Auth::id();
         $isMine = $message->id_expediteur === $currentUserId;
-
-        $html = '<div class="message-item flex ' . ($isMine ? 'justify-end' : 'justify-start') . '" data-message-id="' . $message->id . '" data-sender-id="' . $message->id_expediteur . '" data-sender-name="' . e($message->expediteur->prenom ?? '') . '">';
-        $html .= '<div class="max-w-[80%] ' . ($isMine ? 'order-2' : 'order-1') . '">';
-        
-        $style = $isMine 
-            ? 'background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)); color: white;' 
-            : 'background-color: var(--color-secondary-light); color: var(--color-nav-text);';
-        
-        $html .= '<div class="rounded-xl px-4 py-2.5 shadow-sm message-bubble" style="' . $style . '">';
-        
-        $html .= '<div class="message-content" data-message-id="' . $message->id . '">';
-        if ($message->contenu) {
-            $contenu = nl2br(e($message->contenu));
-            $html .= '<p class="text-sm message-text" id="message-text-' . $message->id . '">' . $contenu . '</p>';
+                    
+        // ============================================
+        // DÉTERMINATION DES RÔLES À PARTIR DES RELATIONS
+        // ============================================
+        $estVendeur = false;
+        $estAcheteur = false;
+        $estFournisseur = false;
+        $estClient = false;
+        $vendeurId = null;
+        $acheteurId = null;
+                    
+        // Si le message a une annonce, on détermine qui est le vendeur
+        if ($message->annonce) {
+            $vendeurId = $message->annonce->id_user;
+                    
+            if ($message->commande) {
+                $estVendeur = $message->commande->id_vendeur === $currentUserId;
+                $estAcheteur = $message->commande->id_acheteur === $currentUserId;
+                $acheteurId = $message->commande->id_acheteur;
+            } else {
+                $estVendeur = $vendeurId === $currentUserId;
+                $estAcheteur = $message->id_destinataire === $currentUserId && $vendeurId !== $currentUserId;
+                $acheteurId = $message->id_destinataire;
+            }
+                    
+            $estFournisseur = $estVendeur;
+            $estClient = $estAcheteur;
         }
-        $html .= '</div>';
-        
-        if ($message->piecesJointes->count() > 0) {
-            $html .= '<div class="mt-2 space-y-2">';
-            foreach ($message->piecesJointes as $piece) {
-                $fileExists = Storage::disk('public')->exists($piece->chemin_stockage);
-                if ($fileExists) {
-                    $html .= $this->renderPieceJointe($piece, $isMine);
+                    
+        // Fonction pour récupérer les caractéristiques
+        $getCaracteristiques = function($annonce) {
+            $caracteristiques = [];
+                    
+            if ($annonce->type === 'animal' && $annonce->animal) {
+                $animal = $annonce->animal;
+                if ($animal->race) {
+                    $caracteristiques[] = ['label' => 'Race', 'value' => $animal->race->nom ?? 'N/A'];
+                }
+                if ($animal->age_mois) {
+                    $caracteristiques[] = ['label' => 'Âge', 'value' => $animal->age_mois . ' mois'];
+                }
+                if ($animal->sexe) {
+                    $caracteristiques[] = ['label' => 'Sexe', 'value' => $animal->sexe === 'M' ? 'Mâle' : 'Femelle'];
+                }
+                if ($animal->description) {
+                    $caracteristiques[] = ['label' => 'Description', 'value' => Str::limit(strip_tags($animal->description), 60)];
                 }
             }
+                    
+            if ($annonce->type === 'nourriture' && $annonce->nourriture) {
+                $nourriture = $annonce->nourriture;
+                if ($nourriture->type) {
+                    $caracteristiques[] = ['label' => 'Type', 'value' => ucfirst(str_replace('_', ' ', $nourriture->type))];
+                }
+                if ($nourriture->nom) {
+                    $caracteristiques[] = ['label' => 'Nom', 'value' => $nourriture->nom];
+                }
+                if ($nourriture->description) {
+                    $caracteristiques[] = ['label' => 'Description', 'value' => Str::limit(strip_tags($nourriture->description), 60)];
+                }
+            }
+                    
+            if ($annonce->type === 'accessoire' && $annonce->accessoire) {
+                $accessoire = $annonce->accessoire;
+                if ($accessoire->categorie) {
+                    $caracteristiques[] = ['label' => 'Catégorie', 'value' => $accessoire->categorie];
+                }
+                if ($accessoire->nom) {
+                    $caracteristiques[] = ['label' => 'Nom', 'value' => $accessoire->nom];
+                }
+                if ($accessoire->description) {
+                    $caracteristiques[] = ['label' => 'Description', 'value' => Str::limit(strip_tags($accessoire->description), 60)];
+                }
+            }
+                    
+            if ($annonce->type === 'escrement' && $annonce->escrement) {
+                $escrement = $annonce->escrement;
+                if ($escrement->nom) {
+                    $caracteristiques[] = ['label' => 'Type', 'value' => $escrement->nom];
+                }
+                if ($escrement->description) {
+                    $caracteristiques[] = ['label' => 'Description', 'value' => Str::limit(strip_tags($escrement->description), 60)];
+                }
+            }
+                    
+            // Quantité en stock - affichée pour TOUS
+            if ($annonce->quantite) {
+                $caracteristiques[] = ['label' => 'Quantité disponible', 'value' => $annonce->quantite];
+            }
+                    
+            if ($annonce->description) {
+                $caracteristiques[] = ['label' => 'Description', 'value' => Str::limit(strip_tags($annonce->description), 60)];
+            }
+                    
+            $auteurNom = $annonce->auteur ? ($annonce->auteur->prenom ?? '') . ' ' . ($annonce->auteur->nom ?? '') : 'Vendeur';
+            $caracteristiques[] = ['label' => 'Vendeur', 'value' => $auteurNom];
+                    
+            return $caracteristiques;
+        };
+                    
+        $html = '<div class="message-item flex ' . ($isMine ? 'justify-end' : 'justify-start') . '" data-message-id="' . $message->id . '" data-sender-id="' . $message->id_expediteur . '" data-sender-name="' . e($message->expediteur->prenom ?? '') . '">';
+        $html .= '<div class="max-w-[85%] ' . ($isMine ? 'order-2' : 'order-1') . '">';
+                    
+        // ============================================
+        // CARTE UNIFIÉE - MÊME AFFICHAGE POUR TOUS
+        // ============================================
+        if ($message->id_annonce && $message->annonce) {
+            $annonce = $message->annonce;
+            $annonceRoute = match($annonce->type) {
+                'animal' => route('annonces.animaux.show', $annonce->id),
+                'nourriture' => route('annonces.aliments.show', $annonce->id),
+                'accessoire' => route('annonces.accessoires.show', $annonce->id),
+                'escrement' => route('annonces.escrements.show', $annonce->id),
+                default => route('annonces.show', $annonce->id),
+            };
+                    
+            $imagePrincipale = $annonce->piecesJointes->where('est_principale', true)->first() ?? $annonce->piecesJointes->first();
+            $imageExists = $imagePrincipale && $imagePrincipale->chemin_stockage && Storage::disk('public')->exists($imagePrincipale->chemin_stockage);
+                    
+            $caracteristiques = $getCaracteristiques($annonce);
+                    
+            $icon = match($annonce->type) {
+                'animal' => 'fa-paw',
+                'nourriture' => 'fa-apple-alt',
+                'accessoire' => 'fa-tools',
+                'escrement' => 'fa-leaf',
+                default => 'fa-tag',
+            };
+                    
+            $typeLabel = match($annonce->type) {
+                'animal' => 'Animal',
+                'nourriture' => 'Aliment',
+                'accessoire' => 'Accessoire',
+                'escrement' => 'Engrais',
+                default => 'Annonce',
+            };
+                    
+            // Statistut de la commande
+            $statutCommande = $message->commande ? $message->commande->statut_commande : null;
+            $statutLabel = match($statutCommande) {
+                'validee' => 'Validée',
+                'livree' => 'Livrée',
+                'annulee' => 'Annulée',
+                'en_attente' => 'En attente',
+                default => 'En attente',
+            };
+            $statutColor = match($statutCommande) {
+                'validee' => '#4CAF50',
+                'livree' => '#2196F3',
+                'annulee' => '#f44336',
+                default => '#FF9800',
+            };
+                    
+            // Carte d'annonce - STYLE UNIFIÉ
+            $html .= '<div class="annonce-card-message rounded-xl overflow-hidden mb-2 shadow-md" style="background-color: var(--color-bg-white); border: 2px solid var(--color-primary);">';
+            $html .= '<div class="flex flex-col p-4">';
+                    
+            // En-tête
+            if ($message->est_demande_commande) {
+                $html .= '<div class="text-center mb-3 p-2 rounded-lg" style="background: linear-gradient(135deg, #FFF8E1, #FFECB3); border: 1px solid #FFD54F;">';
+                $html .= '<span class="font-bold text-sm" style="color: #F57F17;"><i class="fas fa-hand-point-right mr-2"></i> Demande de commande</span>';
+                $html .= '</div>';
+            }
+                    
+            if ($message->est_demande_paiement) {
+                $html .= '<div class="text-center mb-3 p-2 rounded-lg" style="background: linear-gradient(135deg, #E3F2FD, #BBDEFB); border: 1px solid #64B5F6;">';
+                $html .= '<span class="font-bold text-sm" style="color: #1565C0;"><i class="fas fa-hand-point-right mr-2"></i> Demande de paiement</span>';
+                $html .= '</div>';
+            }
+                    
+            // Image + Titre + Prix
+            $html .= '<div class="flex items-start gap-4">';
+            $html .= '<div class="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 border-2" style="border-color: var(--color-primary);">';
+            if ($imageExists) {
+                $html .= '<img src="' . asset('storage/' . $imagePrincipale->chemin_stockage) . '" alt="' . e($annonce->titre) . '" class="w-full h-full object-cover">';
+            } else {
+                $html .= '<div class="w-full h-full flex items-center justify-center" style="background-color: var(--color-secondary-light);">';
+                $html .= '<i class="fas ' . $icon . ' text-3xl" style="color: var(--color-primary);"></i>';
+                $html .= '</div>';
+            }
             $html .= '</div>';
+                    
+            $html .= '<div class="flex-1 min-w-0">';
+            $html .= '<h5 class="font-bold text-base truncate" style="color: var(--color-primary-dark);">' . e($annonce->titre) . '</h5>';
+            $html .= '<div class="flex items-center gap-2 flex-wrap mt-1">';
+            $html .= '<span class="text-lg font-bold" style="color: var(--color-primary);">' . number_format($annonce->prix, 0, ',', ' ') . ' FCFA</span>';
+            $html .= '<span class="text-xs px-3 py-1 rounded-full font-medium" style="background: var(--color-secondary-light); color: var(--color-nav-text);">';
+            $html .= '<i class="fas ' . $icon . ' mr-1"></i> ' . $typeLabel . '</span>';
+            $html .= '</div></div></div>';
+                    
+            // Caractéristiques
+            if (count($caracteristiques) > 0) {
+                $html .= '<div class="grid grid-cols-2 gap-2 mt-3 p-3 rounded-lg" style="background-color: var(--color-secondary-light);">';
+                foreach ($caracteristiques as $carac) {
+                    $html .= '<div class="flex items-center gap-1 text-sm">';
+                    $html .= '<span style="color: var(--color-nav-text); opacity: 0.7;">' . $carac['label'] . ':</span>';
+                    $html .= '<span class="font-medium" style="color: var(--color-nav-text);">' . $carac['value'] . '</span>';
+                    $html .= '</div>';
+                }
+                $html .= '</div>';
+            }
+                    
+            // Infos commande
+            if ($message->commande) {
+                $commande = $message->commande;
+                $html .= '<div class="mt-3 p-3 rounded-lg" style="background-color: var(--color-secondary-light); border: 1px solid var(--color-primary);">';
+                $html .= '<div class="grid grid-cols-2 gap-2 text-sm">';
+                $html .= '<div style="color: var(--color-nav-text);"><i class="fas fa-hashtag mr-1" style="color: var(--color-primary);"></i>Commande #' . $commande->id . '</div>';
+                $html .= '<div style="color: var(--color-nav-text);"><i class="fas fa-box mr-1" style="color: var(--color-primary);"></i>Qté: ' . $commande->quantite . '</div>';
+                $html .= '<div style="color: var(--color-nav-text);"><i class="fas fa-money-bill-wave mr-1" style="color: var(--color-primary);"></i>Total: ' . number_format($commande->montant_total, 0, ',', ' ') . ' FCFA</div>';
+                if ($commande->reduction > 0) {
+                    $html .= '<div style="color: #4CAF50;"><i class="fas fa-tag mr-1"></i>Réduction: -' . number_format($commande->reduction, 0, ',', ' ') . ' FCFA</div>';
+                }
+                $html .= '<div class="col-span-2 font-bold text-center mt-1 p-2 rounded" style="color: var(--color-primary); background-color: var(--color-bg-gray);">';
+                $html .= '<i class="fas fa-credit-card mr-1"></i>À payer: ' . number_format($commande->montant_ajuste, 0, ',', ' ') . ' FCFA</div>';
+                $html .= '<div class="col-span-2 text-center text-xs mt-1" style="color: var(--color-nav-text); opacity: 0.7;">';
+                $html .= 'Statut: <span class="font-medium" style="color: ' . $statutColor . ';">' . $statutLabel . '</span>';
+                $html .= '</div></div></div>';
+            }
+                    
+            // Message de sécurité
+            if ($message->est_demande_commande || $message->est_demande_paiement) {
+                $html .= '<div class="mt-3 text-xs px-3 py-2 rounded-lg text-center" style="background: rgba(255,193,7,0.1); color: #F57F17; border: 1px solid #FFD54F;">';
+                $html .= '<i class="fas fa-shield-alt mr-1"></i> ' . e($message->contenu);
+                $html .= '</div>';
+            }
+                    
+            // Boutons
+            $html .= '<div class="flex flex-wrap items-center gap-2 mt-4">';
+                    
+            // Voir l'annonce - TOUS
+            $html .= '<a href="' . $annonceRoute . '" class="px-4 py-2 rounded-lg text-sm font-semibold text-white transition hover:scale-105" style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));">';
+            $html .= '<i class="fas fa-eye mr-1"></i> Voir l\'annonce</a>';
+                    
+            // Message normal
+            if (!$message->est_demande_commande && !$message->est_demande_paiement) {
+                if ($estVendeur) {
+                    $html .= '<button onclick="initierCommande(' . $annonce->id . ', ' . $message->id_destinataire . ')" class="px-4 py-2 rounded-lg text-sm font-semibold text-white transition hover:scale-105" style="background: linear-gradient(135deg, #FF9800, #F57C00);">';
+                    $html .= '<i class="fas fa-shopping-cart mr-1"></i> Initier commande</button>';
+                }
+            }
+                    
+            // Demande de commande
+            if ($message->est_demande_commande && $estAcheteur) {
+                $html .= '<button onclick="ouvrirFormulaireCommande(' . $annonce->id . ', ' . $message->id . ')" class="px-4 py-2 rounded-lg text-sm font-bold text-white transition hover:scale-105" style="background: linear-gradient(135deg, #4CAF50, #2E7D32);">';
+                $html .= '<i class="fas fa-shopping-cart mr-1"></i> Commander maintenant</button>';
+            }
+                    
+            // Demande de paiement
+            if ($message->est_demande_paiement) {
+                if ($estVendeur && $message->commande) {
+                    $html .= '<a href="' . route('commandes.show', $message->commande->id) . '" class="px-4 py-2 rounded-lg text-sm font-semibold text-white transition hover:scale-105" style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));">';
+                    $html .= '<i class="fas fa-eye mr-1"></i> Voir la commande</a>';
+                    $html .= '<button onclick="ajusterPaiement(' . $message->commande->id . ')" class="px-4 py-2 rounded-lg text-sm font-semibold text-white transition hover:scale-105" style="background: linear-gradient(135deg, #FF9800, #F57C00);">';
+                    $html .= '<i class="fas fa-edit mr-1"></i> Ajuster le paiement</button>';
+                }
+                    
+                if ($estAcheteur && $message->commande) {
+                    $html .= '<a href="' . route('acheteur.paiement', $message->commande->id) . '" class="px-6 py-2.5 rounded-lg text-sm font-bold text-white transition hover:scale-105" style="background: linear-gradient(135deg, #f44336, #c62828);">';
+                    $html .= '<i class="fas fa-credit-card mr-1"></i> Payer maintenant</a>';
+                }
+            }
+                    
+            $html .= '</div></div></div>';
         }
-        
+                    
+        // ============================================
+        // BULLE DU MESSAGE
+        // ============================================
+        if (!$message->est_demande_commande && !$message->est_demande_paiement) {
+            $style = $isMine ? 'background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)); color: white;' : 'background-color: var(--color-secondary-light); color: var(--color-nav-text);';
+            $html .= '<div class="rounded-xl px-4 py-2.5 shadow-sm message-bubble ' . ($isMine ? 'text-white' : '') . '" style="' . $style . '">';
+            $html .= '<div class="message-content" data-message-id="' . $message->id . '">';
+            if ($message->contenu) {
+                $html .= '<p class="text-sm message-text" id="message-text-' . $message->id . '">' . nl2br(e($message->contenu)) . '</p>';
+            }
+            $html .= '</div>';
+                    
+            if ($message->piecesJointes->count() > 0) {
+                $html .= '<div class="mt-2 space-y-2">';
+                foreach ($message->piecesJointes as $piece) {
+                    $fileExists = Storage::disk('public')->exists($piece->chemin_stockage);
+                    if ($fileExists) {
+                        $html .= $this->renderPieceJointe($piece, $isMine);
+                    }
+                }
+                $html .= '</div>';
+            }
+            $html .= '</div>';
+                    
+            $html .= '<div class="flex items-center gap-2 mt-1 ' . ($isMine ? 'justify-end' : 'justify-start') . '">';
+            $html .= '<span class="text-[10px]" style="color: var(--color-nav-text); opacity: 0.5;">';
+            $html .= $message->created_at->format('d/m/Y H:i');
+            if ($isMine) {
+                $html .= $message->lu ? '<i class="fas fa-check-double ml-1 text-blue-500"></i>' : '<i class="fas fa-check ml-1"></i>';
+            }
+            if ($message->has_pieces_jointes) {
+                $html .= '<i class="fas fa-paperclip ml-1"></i>';
+            }
+            if ($message->created_at != $message->updated_at) {
+                $html .= ' <span class="text-[8px] opacity-40 ml-1">(modifié)</span>';
+            }
+            $html .= '</span>';
+            $senderName = $message->expediteur->prenom ?? 'Utilisateur';
+            $html .= '<button onclick="replyToMessage(' . $message->id . ', \'' . addslashes($senderName) . '\')" class="text-[10px] transition hover:scale-110" style="color: var(--color-primary);" title="Répondre à ce message">';
+            $html .= '<i class="fas fa-reply"></i></button></div>';
+        } else {
+            $html .= '<div class="flex items-center gap-2 mt-1 ' . ($isMine ? 'justify-end' : 'justify-start') . '">';
+            $html .= '<span class="text-[10px]" style="color: var(--color-nav-text); opacity: 0.5;">';
+            $html .= $message->created_at->format('d/m/Y H:i');
+            if ($isMine) {
+                $html .= $message->lu ? '<i class="fas fa-check-double ml-1 text-blue-500"></i>' : '<i class="fas fa-check ml-1"></i>';
+            }
+            $html .= '</span></div>';
+        }
+                    
         $html .= '</div>';
-        
-        $html .= '<div class="flex items-center gap-2 mt-1 ' . ($isMine ? 'justify-end' : 'justify-start') . '">';
-        $html .= '<span class="text-[10px]" style="color: var(--color-nav-text); opacity: 0.5;">';
-        $html .= $message->created_at->format('d/m/Y H:i');
-        if ($isMine) {
-            $html .= $message->lu ? '<i class="fas fa-check-double ml-1 text-blue-500"></i>' : '<i class="fas fa-check ml-1"></i>';
-        }
-        if ($message->has_pieces_jointes) {
-            $html .= '<i class="fas fa-paperclip ml-1"></i>';
-        }
-        if ($message->created_at != $message->updated_at) {
-            $html .= ' <span class="text-[8px] opacity-40 ml-1">(modifié)</span>';
-        }
-        $html .= '</span>';
-        
-        $senderName = $message->expediteur->prenom ?? 'Utilisateur';
-        $html .= '<button onclick="replyToMessage(' . $message->id . ', \'' . addslashes($senderName) . '\')" class="text-[10px] transition hover:scale-110" style="color: var(--color-primary);" title="Répondre à ce message">';
-        $html .= '<i class="fas fa-reply"></i>';
-        $html .= '</button>';
-        $html .= '</div>';
-        
-        $html .= '</div>';
-        
+                    
         if (!$isMine) {
             $html .= '<div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0 ml-2 order-2" style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));">';
             $html .= strtoupper(substr($message->expediteur->prenom ?? '', 0, 1) . substr($message->expediteur->nom ?? '', 0, 1));
             $html .= '</div>';
         }
-        
+                    
         $html .= '</div>';
-
+                    
         return $html;
     }
 
@@ -797,7 +1100,6 @@ class MessageController extends Controller
             $html .= '<video controls class="w-full max-h-64" preload="metadata" style="display: block; background: #000;">';
             $html .= '<source src="' . $url . '" type="video/mp4">';
             $html .= '<source src="' . $url . '" type="video/webm">';
-            $html .= '<source src="' . $url . '" type="video/avi">';
             $html .= 'Votre navigateur ne supporte pas la lecture de vidéo.';
             $html .= '</video>';
             $html .= '<div class="flex items-center justify-between mt-1 px-1">';
@@ -889,7 +1191,6 @@ class MessageController extends Controller
             $filesCount = $message->piecesJointes->count();
             $deletedFiles = [];
 
-            // Supprimer les pièces jointes physiquement
             foreach ($message->piecesJointes as $piece) {
                 $filePath = $piece->chemin_stockage;
                 if (Storage::disk('public')->exists($filePath)) {
@@ -1007,6 +1308,8 @@ class MessageController extends Controller
                 'reponse_a_id' => null,
                 'lu' => false,
                 'has_pieces_jointes' => false,
+                'est_demande_commande' => false,
+                'est_demande_paiement' => false,
             ]);
 
             MessageLogger::logSuccess('DEMARRAGE_CONVERSATION', $message, [
@@ -1073,6 +1376,332 @@ class MessageController extends Controller
         } catch (Throwable $e) {
             MessageLogger::logError('COMPTER_NON_LUS', null, $e);
             return response()->json(['unread' => 0, 'error' => 'Erreur de calcul'], 500);
+        }
+    }
+
+    /**
+     * Initier une commande depuis un message (AJAX)
+     */
+    public function initierCommande(Request $request)
+    {
+        try {
+            $request->validate([
+                'id_annonce' => 'required|exists:annonce,id',
+                'id_destinataire' => 'required|exists:users,id',
+            ]);
+
+            $annonce = Annonce::with(['auteur', 'piecesJointes', 'animal', 'animal.race', 'nourriture', 'accessoire', 'escrement'])->find($request->id_annonce);
+            
+            // Vérifier que l'utilisateur est le vendeur (fournisseur)
+            if ($annonce->id_user !== Auth::id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vous n\'êtes pas autorisé à initier une commande pour cette annonce.'
+                ], 403);
+            }
+
+            // Vérifier que le destinataire est bien un client et non le fournisseur lui-même
+            if (Auth::id() == $request->id_destinataire) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vous ne pouvez pas vous initier une commande à vous-même.'
+                ], 400);
+            }
+
+            // Créer le message de demande de commande avec les bons IDs
+            $message = Message::create([
+                'id_expediteur' => Auth::id(), // Le fournisseur
+                'id_destinataire' => $request->id_destinataire, // Le client
+                'id_annonce' => $request->id_annonce,
+                'contenu' => 'AgriHub assure la sécurité de vos commandes.',
+                'est_demande_commande' => true,
+                'est_demande_paiement' => false,
+                'date_envoi' => now(),
+                'est_reponse' => false,
+                'lu' => false,
+                'has_pieces_jointes' => false,
+            ]);
+
+            $message->load([
+                'expediteur', 
+                'destinataire', 
+                'annonce',
+                'annonce.piecesJointes',
+                'annonce.auteur',
+                'annonce.animal',
+                'annonce.animal.race',
+                'annonce.nourriture',
+                'annonce.accessoire',
+                'annonce.escrement',
+                'commande'
+            ]);
+
+            MessageLogger::logSuccess('INITIER_COMMANDE', $message, [
+                'info' => "Demande de commande initiée pour l'annonce ID={$request->id_annonce} vers le client ID={$request->id_destinataire}"
+            ]);
+
+            $html = $this->renderMessage($message);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Demande de commande envoyée avec succès.',
+                'html' => $html,
+                'data' => $message
+            ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'errors' => $e->errors()
+            ], 422);
+        } catch (Throwable $e) {
+            MessageLogger::logError('INITIER_COMMANDE', null, $e, [
+                'annonce_id' => $request->id_annonce ?? null,
+                'destinataire_id' => $request->id_destinataire ?? null
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Créer une commande depuis une demande (AJAX)
+     */
+    public function creerCommande(Request $request)
+    {
+        try {
+            $request->validate([
+                'id_message' => 'required|exists:message,id',
+                'quantite' => 'required|numeric|min:1',
+            ]);
+
+            $message = Message::with(['annonce', 'annonce.auteur'])->find($request->id_message);
+            
+            if (!$message->isDemandeCommande()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ce message n\'est pas une demande de commande.'
+                ], 400);
+            }
+
+            $annonce = $message->annonce;
+            
+            if ($message->id_destinataire !== Auth::id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vous n\'êtes pas autorisé à créer une commande pour ce message.'
+                ], 403);
+            }
+
+            if ($annonce->statut !== 'active') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cette annonce n\'est plus disponible.'
+                ], 400);
+            }
+
+            $commande = Commande::create([
+                'id_acheteur' => Auth::id(),
+                'id_vendeur' => $message->id_expediteur,
+                'id_annonce' => $annonce->id,
+                'prix_unitaire' => $annonce->prix,
+                'quantite' => $request->quantite,
+                'reduction' => 0,
+                'montant_total' => $annonce->prix * $request->quantite,
+                'montant_ajuste' => $annonce->prix * $request->quantite,
+                'commission_prelevee' => 0,
+                'statut_commande' => 'en_attente',
+                'date_commande' => now(),
+            ]);
+
+            $message->update(['id_commande' => $commande->id]);
+
+            // Créer automatiquement une demande de paiement
+            $messagePaiement = Message::createDemandePaiement(
+                Auth::id(),
+                $message->id_expediteur,
+                $commande->id
+            );
+
+            MessageLogger::logSuccess('CREER_COMMANDE', $message, [
+                'commande_id' => $commande->id,
+                'quantite' => $request->quantite,
+                'montant_total' => $commande->montant_total,
+                'info' => "Commande créée depuis la demande de commande"
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Commande créée avec succès.',
+                'data' => $commande
+            ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'errors' => $e->errors()
+            ], 422);
+        } catch (Throwable $e) {
+            MessageLogger::logError('CREER_COMMANDE', null, $e, [
+                'message_id' => $request->id_message ?? null,
+                'quantite' => $request->quantite ?? null
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Demander un paiement (AJAX)
+     */
+    public function demanderPaiement(Request $request)
+    {
+        try {
+            $request->validate([
+                'id_commande' => 'required|exists:commande,id',
+            ]);
+
+            $commande = Commande::with(['annonce', 'annonce.piecesJointes', 'acheteur'])->find($request->id_commande);
+            
+            if ($commande->id_vendeur !== Auth::id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vous n\'êtes pas autorisé à demander le paiement pour cette commande.'
+                ], 403);
+            }
+
+            if ($commande->statut_commande !== 'en_attente') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cette commande ne peut pas être payée actuellement.'
+                ], 400);
+            }
+
+            $message = Message::createDemandePaiement(
+                Auth::id(),
+                $commande->id_acheteur,
+                $request->id_commande
+            );
+
+            $message->load([
+                'expediteur', 
+                'destinataire', 
+                'annonce',
+                'annonce.piecesJointes',
+                'annonce.auteur',
+                'annonce.animal',
+                'annonce.animal.race',
+                'annonce.nourriture',
+                'annonce.accessoire',
+                'annonce.escrement',
+                'commande'
+            ]);
+
+            MessageLogger::logSuccess('DEMANDER_PAIEMENT', $message, [
+                'commande_id' => $request->id_commande,
+                'montant' => $commande->montant_ajuste,
+                'info' => "Demande de paiement envoyée"
+            ]);
+
+            $html = $this->renderMessage($message);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Demande de paiement envoyée avec succès.',
+                'html' => $html,
+                'data' => $message
+            ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'errors' => $e->errors()
+            ], 422);
+        } catch (Throwable $e) {
+            MessageLogger::logError('DEMANDER_PAIEMENT', null, $e, [
+                'commande_id' => $request->id_commande ?? null
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Récupérer les infos d'une annonce pour le modal (AJAX)
+     */
+    public function getAnnonceInfo($id)
+    {
+        try {
+            $annonce = Annonce::with([
+                'piecesJointes',
+                'animal',
+                'animal.race',
+                'nourriture',
+                'accessoire',
+                'escrement'
+            ])->findOrFail($id);
+            
+            $imagePrincipale = $annonce->piecesJointes->where('est_principale', true)->first() ?? $annonce->piecesJointes->first();
+            $imageUrl = null;
+            if ($imagePrincipale && $imagePrincipale->chemin_stockage && Storage::disk('public')->exists($imagePrincipale->chemin_stockage)) {
+                $imageUrl = asset('storage/' . $imagePrincipale->chemin_stockage);
+            }
+            
+            // Récupérer les caractéristiques
+            $caracteristiques = [];
+            if ($annonce->type === 'animal' && $annonce->animal) {
+                $animal = $annonce->animal;
+                if ($animal->race) {
+                    $caracteristiques[] = ['label' => 'Race', 'value' => $animal->race->nom ?? 'N/A'];
+                }
+                if ($animal->age_mois) {
+                    $caracteristiques[] = ['label' => 'Âge', 'value' => $animal->age_mois . ' mois'];
+                }
+                if ($animal->sexe) {
+                    $caracteristiques[] = ['label' => 'Sexe', 'value' => $animal->sexe === 'M' ? 'Mâle' : 'Femelle'];
+                }
+            }
+            if ($annonce->type === 'nourriture' && $annonce->nourriture) {
+                $nourriture = $annonce->nourriture;
+                if ($nourriture->type) {
+                    $caracteristiques[] = ['label' => 'Type', 'value' => ucfirst(str_replace('_', ' ', $nourriture->type))];
+                }
+            }
+            if ($annonce->type === 'accessoire' && $annonce->accessoire) {
+                $accessoire = $annonce->accessoire;
+                if ($accessoire->categorie) {
+                    $caracteristiques[] = ['label' => 'Catégorie', 'value' => $accessoire->categorie];
+                }
+            }
+            if ($annonce->type === 'escrement' && $annonce->escrement) {
+                $escrement = $annonce->escrement;
+                if ($escrement->nom) {
+                    $caracteristiques[] = ['label' => 'Type', 'value' => $escrement->nom];
+                }
+            }
+            if ($annonce->quantite) {
+                $caracteristiques[] = ['label' => 'Quantité disponible', 'value' => $annonce->quantite];
+            }
+            
+            return response()->json([
+                'id' => $annonce->id,
+                'titre' => $annonce->titre,
+                'prix' => number_format($annonce->prix, 0, ',', ' '),
+                'prix_raw' => $annonce->prix,
+                'image' => $imageUrl,
+                'type' => $annonce->type,
+                'quantite' => $annonce->quantite,
+                'caracteristiques' => $caracteristiques
+            ]);
+            
+        } catch (Throwable $e) {
+            return response()->json(['error' => 'Annonce non trouvée'], 404);
         }
     }
 }

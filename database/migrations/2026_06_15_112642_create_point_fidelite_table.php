@@ -14,7 +14,7 @@ return new class extends Migration
             $table->decimal('montant_points', 12, 2);
             $table->enum('type_operation', ['gain', 'depense']);
             $table->timestamp('date_operation')->useCurrent();
-            $table->foreignId('id_transaction_source')->nullable()->constrained('transaction')->onDelete('set null');
+            $table->foreignId('id_commande')->nullable()->constrained('commande')->onDelete('set null');
             $table->date('date_expiration')->nullable();
             $table->timestamps();
         });

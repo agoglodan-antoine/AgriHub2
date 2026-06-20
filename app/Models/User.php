@@ -184,30 +184,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Relation avec les transactions comme acheteur.
-     */
-    public function achats()
-    {
-        return $this->hasMany(Transaction::class, 'id_acheteur');
-    }
-
-    /**
-     * Relation avec les transactions comme vendeur.
-     */
-    public function ventes()
-    {
-        return $this->hasMany(Transaction::class, 'id_vendeur');
-    }
-
-    /**
-     * Relation avec les transactions comme transporteur.
-     */
-    public function transports()
-    {
-        return $this->hasMany(Transaction::class, 'id_transporteur');
-    }
-
-    /**
      * Relation avec les rendez-vous comme vétérinaire.
      */
     public function rendezVousVeto()
@@ -502,5 +478,37 @@ class User extends Authenticatable
             ->sum('montant_points');
 
         return $gains - $depenses;
+    }
+
+    /**
+     * Relation avec les commandes comme acheteur.
+     */
+    public function commandesAcheteur()
+    {
+        return $this->hasMany(Commande::class, 'id_acheteur');
+    }
+
+    /**
+     * Relation avec les commandes comme vendeur.
+     */
+    public function commandesVendeur()
+    {
+        return $this->hasMany(Commande::class, 'id_vendeur');
+    }
+
+    /**
+     * Relation avec les commandes comme transporteur.
+     */
+    public function commandesTransporteur()
+    {
+        return $this->hasMany(Commande::class, 'id_transporteur');
+    }
+
+    /**
+     * Relation avec les paiements (via commandes).
+     */
+    public function paiements()
+    {
+        return $this->hasManyThrough(Paiement::class, Commande::class, 'id_acheteur', 'id_commande');
     }
 }

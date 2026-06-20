@@ -26,8 +26,8 @@ class Acheteur extends Model
         return $this->belongsTo(User::class, 'id_user');
     }
 
-    public function transactions()
+    public function commandes()
     {
-        return $this->hasManyThrough(Transaction::class, User::class, 'id_user', 'id_acheteur');
+        return $this->hasManyThrough(Commande::class, User::class, 'id_user', 'id_acheteur');
     }
 }

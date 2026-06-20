@@ -32,6 +32,10 @@ class Annonce extends Model
         'type' => 'string',
     ];
 
+    // ============================================
+    // RELATIONS
+    // ============================================
+
     public function auteur()
     {
         return $this->belongsTo(User::class, 'id_user');
@@ -62,14 +66,32 @@ class Annonce extends Model
         return $this->hasMany(AnnoncePieceJointe::class, 'id_annonce');
     }
 
-    public function transactions()
+    public function commandes()
     {
-        return $this->hasMany(Transaction::class, 'id_annonce');
+        return $this->hasMany(Commande::class, 'id_annonce');
     }
 
-    // Vérifier si l'annonce est active
+    // ============================================
+    // MÉTHODES
+    // ============================================
+
     public function isActive()
     {
         return $this->statut === 'active';
+    }
+
+    public function isEnAttente()
+    {
+        return $this->statut === 'en_attente';
+    }
+
+    public function isVendue()
+    {
+        return $this->statut === 'vendue';
+    }
+
+    public function isExpiree()
+    {
+        return $this->statut === 'expiree';
     }
 }

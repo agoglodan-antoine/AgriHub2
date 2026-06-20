@@ -1,0 +1,403 @@
+@startuml
+!define ENTITY class
+!define ENUM enum
+
+' ============================================================
+' I. UTILISATEURS
+' ============================================================
+
+class type_user {
+  + id: INT UNSIGNED
+  + type: VARCHAR(50)
+  + label: VARCHAR(100)
+  + description: TEXT
+  + statut: ENUM(actif,inactif)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class users {
+  + id_user: INT UNSIGNED
+  + id_type_user: INT UNSIGNED
+  + nom: VARCHAR(100)
+  + prenom: VARCHAR(100)
+  + departement: VARCHAR(100)
+  + commune: VARCHAR(100)
+  + ville: VARCHAR(100)
+  + email: VARCHAR(191)
+  + mot_de_passe_hash: VARCHAR(255)
+  + telephone: VARCHAR(30)
+  + adresse: TEXT
+  + date_inscription: TIMESTAMP
+  + statut: ENUM(actif,suspendu,banni)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class eleveur {
+  + id_eleveur: INT UNSIGNED
+  + id_user: INT UNSIGNED
+  + nom_elevage: VARCHAR(200)
+  + description_elevage: TEXT
+  + localisation_gps: VARCHAR(100)
+  + siret: VARCHAR(50)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class acheteur {
+  + id_acheteur: INT UNSIGNED
+  + id_user: INT UNSIGNED
+  + type_acheteur: ENUM(particulier,professionnel)
+  + preferences_achat: TEXT
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class veterinaire {
+  + id_veterinaire: INT UNSIGNED
+  + id_user: INT UNSIGNED
+  + numero_ordre: VARCHAR(100)
+  + specialites: TEXT
+  + zone_intervention: VARCHAR(200)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class transporteur {
+  + id_transporteur: INT UNSIGNED
+  + id_user: INT UNSIGNED
+  + type_vehicule: VARCHAR(100)
+  + capacite_transport: DECIMAL(10,2)
+  + zone_intervention: VARCHAR(200)
+  + licence_transport: VARCHAR(100)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class vendeur_nourriture {
+  + id_vendeur_nourriture: INT UNSIGNED
+  + id_user: INT UNSIGNED
+  + nom_entreprise: VARCHAR(200)
+  + description: TEXT
+  + localisation_gps: VARCHAR(100)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class vendeur_accessoire {
+  + id_vendeur_accessoire: INT UNSIGNED
+  + id_user: INT UNSIGNED
+  + nom_entreprise: VARCHAR(200)
+  + description: TEXT
+  + localisation_gps: VARCHAR(100)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+' ============================================================
+' II. CLASSIFICATION ANIMALE
+' ============================================================
+
+class domaine {
+  + id: INT UNSIGNED
+  + nom: VARCHAR(100)
+  + label: VARCHAR(150)
+  + icone: VARCHAR(100)
+  + description: TEXT
+  + statut: ENUM(actif,inactif)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class zoologie {
+  + id: INT UNSIGNED
+  + nom: VARCHAR(100)
+  + label: VARCHAR(150)
+  + description: TEXT
+  + statut: ENUM(actif,inactif)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class especes {
+  + id: INT UNSIGNED
+  + nom: VARCHAR(100)
+  + label: VARCHAR(150)
+  + icone: VARCHAR(100)
+  + id_zoologie: INT UNSIGNED
+  + id_domaine: INT UNSIGNED
+  + description: TEXT
+  + statut: ENUM(actif,inactif)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class races {
+  + id: INT UNSIGNED
+  + nom: VARCHAR(100)
+  + label: VARCHAR(150)
+  + id_espece: INT UNSIGNED
+  + description: TEXT
+  + statut: ENUM(actif,inactif)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class animaux {
+  + id: INT UNSIGNED
+  + id_user: INT UNSIGNED
+  + nom: VARCHAR(100)
+  + age_mois: SMALLINT UNSIGNED
+  + sexe: ENUM(M,F)
+  + id_race: INT UNSIGNED
+  + description: TEXT
+  + statut: ENUM(disponible,vendu,reserve)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class escrement {
+  + id: INT UNSIGNED
+  + id_user: INT UNSIGNED
+  + id_espece: INT UNSIGNED
+  + nom: VARCHAR(150)
+  + description: TEXT
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+' ============================================================
+' III. PRODUITS
+' ============================================================
+
+class nourriture {
+  + id: INT UNSIGNED
+  + id_user: INT UNSIGNED
+  + type: ENUM(provende,aliment_local,autre)
+  + nom: VARCHAR(200)
+  + description: TEXT
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class nourriture_espece {
+  + id: INT UNSIGNED
+  + id_nourriture: INT UNSIGNED
+  + id_espece: INT UNSIGNED
+}
+
+class accessoire {
+  + id: INT UNSIGNED
+  + id_user: INT UNSIGNED
+  + nom: VARCHAR(200)
+  + categorie: VARCHAR(100)
+  + description: TEXT
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+' ============================================================
+' IV. ANNONCES
+' ============================================================
+
+class annonce {
+  + id: INT UNSIGNED
+  + id_user: INT UNSIGNED
+  + titre: VARCHAR(255)
+  + description: TEXT
+  + type: ENUM(animal,escrement,nourriture,accessoire)
+  + id_animal: INT UNSIGNED
+  + id_escrement: INT UNSIGNED
+  + id_nourriture: INT UNSIGNED
+  + id_accessoire: INT UNSIGNED
+  + quantite: DECIMAL(10,2)
+  + prix: DECIMAL(12,2)
+  + statut: ENUM(en_attente,active,vendue,expiree)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class annonce_piece_jointe {
+  + id: INT UNSIGNED
+  + id_annonce: INT UNSIGNED
+  + type_media: ENUM(image,video,document)
+  + nom_media: VARCHAR(255)
+  + taille: BIGINT UNSIGNED
+  + chemin_stockage: VARCHAR(500)
+  + est_principale: TINYINT(1)
+  + ordre_affichage: SMALLINT UNSIGNED
+  + statut: ENUM(actif,supprime,en_attente)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+' ============================================================
+' V. TRANSACTIONS
+' ============================================================
+
+class transaction {
+  + id_transaction: INT UNSIGNED
+  + id_acheteur: INT UNSIGNED
+  + id_vendeur: INT UNSIGNED
+  + id_annonce: INT UNSIGNED
+  + id_transporteur: INT UNSIGNED
+  + montant_total: DECIMAL(14,2)
+  + commission_prelevee: DECIMAL(14,2)
+  + date_transaction: TIMESTAMP
+  + statut_transaction: ENUM(en_attente,validee,livree,annulee)
+  + avis_client: TEXT
+  + note: TINYINT UNSIGNED
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class ligne_transaction {
+  + id_ligne: INT UNSIGNED
+  + id_transaction: INT UNSIGNED
+  + id_annonce: INT UNSIGNED
+  + quantite: DECIMAL(10,2)
+  + prix_unitaire: DECIMAL(12,2)
+  + montant_ligne: DECIMAL(14,2)
+}
+
+' ============================================================
+' VI. RENDEZ-VOUS VÉTÉRINAIRES
+' ============================================================
+
+class rendez_vous {
+  + id: INT UNSIGNED
+  + id_veterinaire: INT UNSIGNED
+  + id_client: INT UNSIGNED
+  + sujet: VARCHAR(255)
+  + description: TEXT
+  + date_prevue: DATETIME
+  + statut: ENUM(en_attente,confirme,realise,annule)
+  + avis_client: TEXT
+  + note: TINYINT UNSIGNED
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+' ============================================================
+' VII. FIDÉLITÉ & RÉCOMPENSES
+' ============================================================
+
+class point_fidelite {
+  + id_point: INT UNSIGNED
+  + id_user: INT UNSIGNED
+  + montant_points: DECIMAL(12,2)
+  + type_operation: ENUM(gain,depense)
+  + date_operation: TIMESTAMP
+  + id_transaction_source: INT UNSIGNED
+  + date_expiration: DATE
+}
+
+class recompense {
+  + id_recompense: INT UNSIGNED
+  + nom_recompense: VARCHAR(200)
+  + description: TEXT
+  + cout_points: DECIMAL(12,2)
+  + type_recompense: VARCHAR(100)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class utilisateur_recompense {
+  + id: INT UNSIGNED
+  + id_user: INT UNSIGNED
+  + id_recompense: INT UNSIGNED
+  + date_obtention: TIMESTAMP
+  + statut: ENUM(en_attente,utilisee)
+}
+
+' ============================================================
+' VIII. MESSAGERIE
+' ============================================================
+
+class message {
+  + id_message: INT UNSIGNED
+  + id_expediteur: INT UNSIGNED
+  + id_destinataire: INT UNSIGNED
+  + contenu: TEXT
+  + date_envoi: TIMESTAMP
+  + est_reponse: TINYINT(1)
+  + reponse_a_id: INT UNSIGNED
+  + lu: TINYINT(1)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+class message_piece_jointes {
+  + id: INT UNSIGNED
+  + id_message: INT UNSIGNED
+  + type_media: ENUM(image,video,document,audio)
+  + nom_media: VARCHAR(255)
+  + taille: BIGINT UNSIGNED
+  + chemin_stockage: VARCHAR(500)
+  + statut: ENUM(actif,supprime,en_attente)
+  + cree_le: TIMESTAMP
+  + modifie_le: TIMESTAMP
+}
+
+' ============================================================
+' RELATIONS
+' ============================================================
+
+' I. Utilisateurs
+type_user "1" -- "0..*" users : "définit le type"
+users "1" -- "0..1" eleveur : "est un"
+users "1" -- "0..1" acheteur : "est un"
+users "1" -- "0..1" veterinaire : "est un"
+users "1" -- "0..1" transporteur : "est un"
+users "1" -- "0..1" vendeur_nourriture : "est un"
+users "1" -- "0..1" vendeur_accessoire : "est un"
+
+' II. Classification animale
+domaine "1" -- "0..*" especes : "classifie"
+zoologie "1" -- "0..*" especes : "classe"
+especes "1" -- "0..*" races : "contient"
+users "1" -- "0..*" animaux : "possède"
+races "1" -- "0..*" animaux : "définit"
+users "1" -- "0..*" escrement : "produit"
+especes "1" -- "0..*" escrement : "source"
+
+' III. Produits
+users "1" -- "0..*" nourriture : "vend"
+nourriture "1" -- "0..*" nourriture_espece : "destinée à"
+especes "1" -- "0..*" nourriture_espece : "pour"
+users "1" -- "0..*" accessoire : "vend"
+
+' IV. Annonces
+users "1" -- "0..*" annonce : "publie"
+animaux "1" -- "0..1" annonce : "concernée"
+escrement "1" -- "0..1" annonce : "concerné"
+nourriture "1" -- "0..1" annonce : "concernée"
+accessoire "1" -- "0..1" annonce : "concerné"
+annonce "1" -- "0..*" annonce_piece_jointe : "contient"
+
+' V. Transactions
+users "1" -- "0..*" transaction : "achète" (acheteur)
+users "1" -- "0..*" transaction : "vend" (vendeur)
+annonce "1" -- "0..*" transaction : "concerne"
+users "1" -- "0..*" transaction : "transport" (transporteur)
+transaction "1" -- "0..*" ligne_transaction : "contient"
+annonce "1" -- "0..*" ligne_transaction : "ligne"
+
+' VI. Rendez-vous
+users "1" -- "0..*" rendez_vous : "consulte" (veterinaire)
+users "1" -- "0..*" rendez_vous : "demande" (client)
+
+' VII. Fidélité
+users "1" -- "0..*" point_fidelite : "cumule"
+transaction "1" -- "0..*" point_fidelite : "génère"
+users "1" -- "0..*" utilisateur_recompense : "obtient"
+recompense "1" -- "0..*" utilisateur_recompense : "attribuée"
+
+' VIII. Messagerie
+users "1" -- "0..*" message : "envoie" (expediteur)
+users "1" -- "0..*" message : "reçoit" (destinataire)
+message "1" -- "0..*" message : "répond à" (auto-référence)
+message "1" -- "0..*" message_piece_jointes : "contient"
+
+@enduml

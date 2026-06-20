@@ -21,25 +21,6 @@
                             </p>
                         </div>
                     </div>
-                    @if($annonce)
-                        @php
-                            $annonceRoute = match($annonce->type) {
-                                'animal' => route('annonces.animaux.show', $annonce->id),
-                                'nourriture' => route('annonces.aliments.show', $annonce->id),
-                                'accessoire' => route('annonces.accessoires.show', $annonce->id),
-                                'escrement' => route('annonces.escrements.show', $annonce->id),
-                                default => route('annonces.show', $annonce->id),
-                            };
-                        @endphp
-                        <a href="{{ $annonceRoute }}" 
-                           class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 text-white flex-shrink-0"
-                           style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);"
-                           onmouseover="this.style.background='rgba(255,255,255,0.35)'; this.style.transform='scale(1.05)'"
-                           onmouseout="this.style.background='rgba(255,255,255,0.2)'; this.style.transform='scale(1)'">
-                            <i class="fas fa-tag mr-1"></i>
-                            Voir l'annonce
-                        </a>
-                    @endif
                 </div>
             </div>
         </div>
@@ -47,51 +28,6 @@
 
     <div class="py-6" style="background-color: var(--color-bg-body);">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <!-- Annonce associée -->
-            @if($annonce)
-                @php
-                    $annonceRoute = match($annonce->type) {
-                        'animal' => route('annonces.animaux.show', $annonce->id),
-                        'nourriture' => route('annonces.aliments.show', $annonce->id),
-                        'accessoire' => route('annonces.accessoires.show', $annonce->id),
-                        'escrement' => route('annonces.escrements.show', $annonce->id),
-                        default => route('annonces.show', $annonce->id),
-                    };
-                @endphp
-                <div class="rounded-xl overflow-hidden shadow-md mb-6 transition hover:shadow-lg cursor-pointer"
-                     style="background-color: var(--color-bg-white); border: 1px solid var(--color-nav-border);"
-                     onclick="window.location='{{ $annonceRoute }}'">
-                    <div class="flex items-center gap-4 p-4">
-                        <div class="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
-                            @php
-                                $img = $annonce->piecesJointes->where('est_principale', true)->first() ?? $annonce->piecesJointes->first();
-                                $imageExists = $img && $img->chemin_stockage && Storage::disk('public')->exists($img->chemin_stockage);
-                            @endphp
-                            @if($imageExists)
-                                <img src="{{ asset('storage/' . $img->chemin_stockage) }}" alt="{{ $annonce->titre }}" class="w-full h-full object-cover">
-                            @else
-                                <div class="w-full h-full flex items-center justify-center" style="background-color: var(--color-secondary-light);">
-                                    <i class="fas fa-tag text-2xl" style="color: var(--color-primary);"></i>
-                                </div>
-                            @endif
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h4 class="font-semibold truncate" style="color: var(--color-nav-text);">{{ $annonce->titre }}</h4>
-                            <p class="text-sm font-bold" style="color: var(--color-primary);">
-                                {{ number_format($annonce->prix, 0, ',', ' ') }} FCFA
-                            </p>
-                            <p class="text-xs" style="color: var(--color-nav-text); opacity: 0.6;">
-                                <i class="fas fa-user mr-1"></i>
-                                Vendeur: {{ $annonce->auteur->prenom ?? '' }} {{ $annonce->auteur->nom ?? '' }}
-                            </p>
-                        </div>
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-chevron-right" style="color: var(--color-nav-text); opacity: 0.3;"></i>
-                        </div>
-                    </div>
-                </div>
-            @endif
-
             <!-- Messages -->
             <div class="rounded-xl shadow-lg overflow-hidden" style="background-color: var(--color-bg-white);">
                 <div class="p-4 space-y-4 max-h-[500px] overflow-y-auto" id="messages-container">
@@ -111,7 +47,7 @@
                             </div>
                         @endif
 
-                        <!-- Message -->
+                        <!-- Message avec annonce intégrée -->
                         @include('messages.partials.message-item', ['message' => $message])
                     @empty
                         <div class="text-center py-8" id="empty-message">
@@ -125,7 +61,6 @@
                     <form id="messageForm" class="space-y-3">
                         @csrf
                         <input type="hidden" name="id_destinataire" value="{{ $otherUser->id }}">
-                        <input type="hidden" name="id_annonce" value="{{ $annonce->id ?? '' }}">
                         <input type="hidden" name="reponse_a_id" id="reponse_a_id" value="">
                         <input type="hidden" name="audio_data" id="audio_data" value="">
                         <input type="hidden" name="video_data" id="video_data" value="">
@@ -358,7 +293,53 @@
             box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
         }
         
-        /* ✅ CORRECTION : Amélioration de l'affichage des images et vidéos */
+        /* Annonce intégrée dans le message */
+        .annonce-card-message {
+            transition: all 0.2s;
+        }
+        .annonce-card-message:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        /* Animation pour les modals */
+        #commandeModal {
+            animation: fadeIn 0.3s ease-out;
+        }
+        #commandeModal > div {
+            animation: slideUp 0.3s ease-out;
+        }
+        #paiementModal {
+            animation: fadeIn 0.3s ease-out;
+        }
+        #paiementModal > div {
+            animation: slideUp 0.3s ease-out;
+        }
+        #ajustementModal {
+            animation: fadeIn 0.3s ease-out;
+        }
+        #ajustementModal > div {
+            animation: slideUp 0.3s ease-out;
+        }
+        #contactModal {
+            animation: fadeIn 0.3s ease-out;
+        }
+        #contactModal > div {
+            animation: slideUp 0.3s ease-out;
+        }
+        #contactModal .scale-95 { transform: scale(0.95); }
+        #contactModal .scale-100 { transform: scale(1); }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        /* Styles pour les fichiers */
         .message-bubble img {
             display: block;
             max-width: 100%;
@@ -373,7 +354,6 @@
             border-radius: 8px;
         }
         
-        /* ✅ AJOUT : Style pour les fichiers dans les messages */
         .file-attachment {
             display: flex;
             align-items: center;
@@ -416,7 +396,6 @@
         }
     </style>
 
-    <!-- Scripts JavaScript -->
     <script>
     // ============================================
     // CONFIGURATION ET VARIABLES
@@ -448,7 +427,6 @@
         const submitBtn = document.getElementById('submit-btn');
         const messageInput = document.getElementById('message-input');
         
-        // Vérifier les enregistrements en cours
         if (isAudioRecording) {
             alert('Veuillez arrêter l\'enregistrement audio avant d\'envoyer.');
             return;
@@ -458,12 +436,9 @@
             return;
         }
         
-        // Vérifier le contenu
         const hasContent = messageInput.value.trim().length > 0;
         const hasAudio = document.getElementById('audio_data').value.length > 0;
         const hasVideo = document.getElementById('video_data').value.length > 0;
-        
-        // Vérifier les fichiers correctement
         let hasFiles = selectedFiles.length > 0;
         const fileInput = document.getElementById('file-input');
         if (!hasFiles && fileInput.files.length > 0) {
@@ -480,7 +455,6 @@
             return;
         }
         
-        // Si selectedFiles est vide mais fileInput a des fichiers, les synchroniser
         if (selectedFiles.length === 0 && fileInput.files.length > 0) {
             const files = Array.from(fileInput.files);
             const validFiles = files.filter(f => f.size > 0);
@@ -490,16 +464,10 @@
             }
         }
         
-        // Créer le FormData
         const formData = new FormData();
         
         formData.append('_token', document.querySelector('input[name="_token"]').value);
         formData.append('id_destinataire', document.querySelector('input[name="id_destinataire"]').value);
-        
-        const idAnnonce = document.querySelector('input[name="id_annonce"]');
-        if (idAnnonce && idAnnonce.value) {
-            formData.append('id_annonce', idAnnonce.value);
-        }
         
         const reponseAId = document.getElementById('reponse_a_id');
         if (reponseAId && reponseAId.value) {
@@ -520,7 +488,6 @@
             formData.append('contenu', messageInput.value.trim());
         }
         
-        // Ajouter les fichiers - utiliser selectedFiles
         if (selectedFiles.length > 0) {
             for (let i = 0; i < selectedFiles.length; i++) {
                 if (selectedFiles[i].size > 0) {
@@ -535,22 +502,10 @@
             }
         }
         
-        // Debug
-        console.log('📦 Envoi des données:');
-        for (let [key, value] of formData.entries()) {
-            if (value instanceof File) {
-                console.log(`  ${key}: ${value.name} (${value.size} bytes)`);
-            } else {
-                console.log(`  ${key}: ${value}`);
-            }
-        }
-        
-        // Désactiver le bouton
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
         hideError();
         
-        // Envoyer la requête
         fetch('{{ route("messagerie.send") }}', {
             method: 'POST',
             headers: {
@@ -575,7 +530,6 @@
                 container.insertAdjacentHTML('beforeend', data.html);
                 container.scrollTop = container.scrollHeight;
                 
-                // Réinitialiser le formulaire
                 messageInput.value = '';
                 messageInput.style.height = 'auto';
                 selectedFiles = [];
@@ -592,6 +546,7 @@
                 const emptyMessage = container.querySelector('#empty-message');
                 if (emptyMessage) emptyMessage.remove();
                 
+                // Réinitialiser le menu contextuel pour les nouveaux messages
                 setTimeout(initContextMenu, 100);
                 
                 showNotification('Message envoyé avec succès !');
@@ -659,8 +614,6 @@
         updateFileInput();
         updateFilePreview();
         input.value = '';
-        
-        console.log('📁 Fichiers sélectionnés:', selectedFiles.length);
     }
 
     function updateFileInput() {
@@ -743,7 +696,7 @@
     }
 
     // ============================================
-    // MENU CONTEXTUEL (Appui long)
+    // MENU CONTEXTUEL (Appui long et clic droit)
     // ============================================
     let contextMenuTarget = null;
     let longPressTimer = null;
@@ -754,31 +707,41 @@
         const messageItems = document.querySelectorAll('.message-item');
         
         messageItems.forEach(item => {
+            // Supprimer les anciens événements
             item.removeEventListener('mousedown', handleMouseDown);
             item.removeEventListener('mouseup', handleMouseUp);
             item.removeEventListener('mouseleave', handleMouseLeave);
+            item.removeEventListener('contextmenu', handleContextMenu);
             item.removeEventListener('touchstart', handleTouchStart);
             item.removeEventListener('touchend', handleTouchEnd);
             item.removeEventListener('touchmove', handleTouchMove);
             
+            // Ajouter les nouveaux événements
             item.addEventListener('mousedown', handleMouseDown);
             item.addEventListener('mouseup', handleMouseUp);
             item.addEventListener('mouseleave', handleMouseLeave);
+            item.addEventListener('contextmenu', handleContextMenu);
             item.addEventListener('touchstart', handleTouchStart);
             item.addEventListener('touchend', handleTouchEnd);
             item.addEventListener('touchmove', handleTouchMove);
         });
     }
 
+    function handleContextMenu(e) {
+        e.preventDefault();
+        showContextMenu(e.clientX, e.clientY, this);
+    }
+
     function handleMouseDown(e) {
         if (e.button === 0) {
             isLongPress = false;
             contextMenuTarget = this;
+            clearTimeout(longPressTimer);
             longPressTimer = setTimeout(() => {
                 isLongPress = true;
                 isContextMenuOpen = true;
                 showContextMenu(e.clientX, e.clientY, this);
-            }, 500);
+            }, 600);
         }
     }
 
@@ -794,12 +757,13 @@
         isLongPress = false;
         contextMenuTarget = this;
         const touch = e.touches[0];
+        clearTimeout(longPressTimer);
         longPressTimer = setTimeout(() => {
             isLongPress = true;
             isContextMenuOpen = true;
             showContextMenu(touch.clientX, touch.clientY, this);
             document.body.style.overflow = 'hidden';
-        }, 500);
+        }, 600);
     }
 
     function handleTouchEnd(e) {
@@ -818,6 +782,8 @@
 
     function showContextMenu(x, y, element) {
         const menu = document.getElementById('contextMenu');
+        if (!menu) return;
+        
         const messageId = element.dataset.messageId;
         const senderId = element.dataset.senderId;
         const currentUserId = {{ Auth::id() }};
@@ -838,15 +804,8 @@
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         
-        let left = x;
-        let top = y;
-        
-        if (left + menuWidth > viewportWidth) {
-            left = viewportWidth - menuWidth - 10;
-        }
-        if (top + menuHeight > viewportHeight) {
-            top = viewportHeight - menuHeight - 10;
-        }
+        let left = Math.min(x, viewportWidth - menuWidth - 10);
+        let top = Math.min(y, viewportHeight - menuHeight - 10);
         
         menu.style.left = left + 'px';
         menu.style.top = top + 'px';
@@ -860,13 +819,42 @@
 
     function hideContextMenu() {
         const menu = document.getElementById('contextMenu');
-        menu.classList.add('hidden');
+        if (menu) {
+            menu.classList.add('hidden');
+        }
         isContextMenuOpen = false;
         
         document.querySelectorAll('.message-item.context-active').forEach(el => {
             el.classList.remove('context-active');
         });
     }
+
+    // Fermer le menu contextuel en cliquant ailleurs
+    document.addEventListener('click', function(e) {
+        const menu = document.getElementById('contextMenu');
+        if (menu && !menu.classList.contains('hidden')) {
+            if (!menu.contains(e.target) && !e.target.closest('.message-item')) {
+                hideContextMenu();
+            }
+        }
+    });
+
+    // Empêcher la propagation du clic sur le menu contextuel
+    document.addEventListener('DOMContentLoaded', function() {
+        const menu = document.getElementById('contextMenu');
+        if (menu) {
+            menu.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        }
+    });
+
+    // Empêcher le menu contextuel par défaut du navigateur
+    document.addEventListener('contextmenu', function(e) {
+        if (e.target.closest('.message-item')) {
+            e.preventDefault();
+        }
+    });
 
     // ============================================
     // MODIFIER UN MESSAGE
@@ -904,7 +892,6 @@
         
         if (!textElement || !messageElement) return;
         
-        // Récupérer le texte brut sans les balises HTML
         const currentText = textElement.textContent;
         
         const editHtml = `
@@ -1021,17 +1008,468 @@
         });
     }
 
-    // Fermer le menu contextuel en cliquant ailleurs
-    document.addEventListener('click', function(e) {
-        const menu = document.getElementById('contextMenu');
-        if (menu && !menu.contains(e.target) && !e.target.closest('.message-item')) {
-            hideContextMenu();
-        }
-    });
+    // ============================================
+    // FONCTIONS POUR LES COMMANDES
+    // ============================================
 
-    document.getElementById('contextMenu').addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
+    function initierCommande(annonceId, destinataireId) {
+        if (!destinataireId) {
+            alert('Destinataire non spécifié.');
+            return;
+        }
+        
+        if (!confirm('Voulez-vous initier une demande de commande pour cette annonce ?')) {
+            return;
+        }
+        
+        fetch('{{ route("messagerie.initier-commande") }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                id_annonce: annonceId,
+                id_destinataire: destinataireId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Demande de commande envoyée avec succès !');
+                const container = document.getElementById('messages-container');
+                container.insertAdjacentHTML('beforeend', data.html);
+                container.scrollTop = container.scrollHeight;
+                setTimeout(initContextMenu, 100);
+            } else {
+                showNotification(data.message || 'Erreur lors de l\'envoi.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showNotification('Erreur de connexion.', 'error');
+        });
+    }
+
+    function ouvrirFormulaireCommande(annonceId, messageId) {
+        const modal = document.getElementById('commandeModal');
+        const content = document.getElementById('commandeModalContent');
+        
+        content.innerHTML = `
+            <div class="text-center py-8" style="color: var(--color-nav-text); opacity: 0.5;">
+                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                <p>Chargement des informations...</p>
+            </div>
+        `;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        fetch(`/annonces/${annonceId}/info`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erreur lors du chargement des informations');
+                }
+                return response.json();
+            })
+            .then(data => {
+                let caracteristiquesHtml = '';
+                if (data.caracteristiques && data.caracteristiques.length > 0) {
+                    caracteristiquesHtml = `
+                        <div class="grid grid-cols-2 gap-1 mt-2 text-xs" style="color: var(--color-nav-text);">
+                            ${data.caracteristiques.map(carac => `
+                                <div class="flex items-center gap-1">
+                                    <span style="opacity: 0.6;">${carac.label}:</span>
+                                    <span class="font-medium">${carac.value}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                
+                content.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3 p-3 rounded-lg" style="background-color: var(--color-secondary-light);">
+                            <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                                ${data.image ? `<img src="${data.image}" class="w-full h-full object-cover">` : 
+                                  `<div class="w-full h-full flex items-center justify-center" style="background-color: var(--color-bg-gray);">
+                                      <i class="fas fa-tag text-xl" style="color: var(--color-primary);"></i>
+                                   </div>`}
+                            </div>
+                            <div>
+                                <p class="font-semibold text-sm" style="color: var(--color-nav-text);">${data.titre}</p>
+                                <p class="text-sm font-bold" style="color: var(--color-primary);">
+                                    ${data.prix} FCFA
+                                </p>
+                            </div>
+                        </div>
+                        
+                        ${caracteristiquesHtml}
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--color-nav-text);">
+                                Quantité
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <button onclick="changerQuantite(-1)" 
+                                        class="w-8 h-8 rounded-lg flex items-center justify-center transition"
+                                        style="background-color: var(--color-secondary-light); color: var(--color-nav-text);"
+                                        onmouseover="this.style.backgroundColor='var(--color-secondary)'"
+                                        onmouseout="this.style.backgroundColor='var(--color-secondary-light)'">
+                                    <i class="fas fa-minus text-xs"></i>
+                                </button>
+                                <input type="number" id="quantiteCommande" min="1" value="1" 
+                                       class="w-full px-3 py-2 rounded-lg border text-center focus:outline-none focus:ring-2"
+                                       style="border-color: var(--color-nav-border); background-color: var(--color-bg-gray); color: var(--color-nav-text);"
+                                       onchange="calculerTotal()">
+                                <button onclick="changerQuantite(1)" 
+                                        class="w-8 h-8 rounded-lg flex items-center justify-center transition"
+                                        style="background-color: var(--color-secondary-light); color: var(--color-nav-text);"
+                                        onmouseover="this.style.backgroundColor='var(--color-secondary)'"
+                                        onmouseout="this.style.backgroundColor='var(--color-secondary-light)'">
+                                    <i class="fas fa-plus text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="p-3 rounded-lg" style="background-color: var(--color-secondary-light);">
+                            <div class="flex justify-between text-sm">
+                                <span style="color: var(--color-nav-text);">Total à payer</span>
+                                <span class="font-bold" style="color: var(--color-primary);" id="totalPrix">
+                                    ${data.prix} FCFA
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <button onclick="confirmerCommande(${annonceId}, ${messageId})" 
+                                class="w-full px-4 py-2.5 rounded-lg text-white font-bold transition"
+                                style="background: linear-gradient(135deg, #4CAF50, #2E7D32);"
+                                onmouseover="this.style.background='linear-gradient(135deg, #2E7D32, #1B5E20)'; this.style.transform='translateY(-2px)'"
+                                onmouseout="this.style.background='linear-gradient(135deg, #4CAF50, #2E7D32)'; this.style.transform='translateY(0)'">
+                            <i class="fas fa-check mr-2"></i> Confirmer la commande
+                        </button>
+                    </div>
+                `;
+                
+                content.dataset.prix = data.prix_raw;
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                content.innerHTML = `
+                    <div class="text-center py-8" style="color: #DC2626;">
+                        <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+                        <p>Erreur lors du chargement des informations.</p>
+                        <button onclick="fermerFormulaireCommande()" 
+                                class="mt-4 px-4 py-2 rounded-lg text-white"
+                                style="background: linear-gradient(135deg, #DC2626, #B91C1C);">
+                            Fermer
+                        </button>
+                    </div>
+                `;
+            });
+    }
+
+    function fermerFormulaireCommande() {
+        const modal = document.getElementById('commandeModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    function changerQuantite(delta) {
+        const input = document.getElementById('quantiteCommande');
+        let value = parseInt(input.value) || 1;
+        value = Math.max(1, value + delta);
+        input.value = value;
+        calculerTotal();
+    }
+
+    function calculerTotal() {
+        const content = document.getElementById('commandeModalContent');
+        const prix = parseFloat(content.dataset.prix) || 0;
+        const quantite = parseInt(document.getElementById('quantiteCommande').value) || 1;
+        const total = prix * quantite;
+        const totalElement = document.getElementById('totalPrix');
+        if (totalElement) {
+            totalElement.textContent = total.toLocaleString('fr-FR') + ' FCFA';
+        }
+    }
+
+    function confirmerCommande(annonceId, messageId) {
+        const quantite = document.getElementById('quantiteCommande').value;
+        
+        if (!quantite || quantite < 1) {
+            showNotification('Veuillez saisir une quantité valide.', 'error');
+            return;
+        }
+        
+        const btn = document.querySelector('#commandeModalContent button:last-child');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Création...';
+        
+        fetch('{{ route("messagerie.creer-commande") }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                id_message: messageId,
+                quantite: quantite
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            
+            if (data.success) {
+                showNotification('Commande créée avec succès !');
+                fermerFormulaireCommande();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.message || 'Erreur lors de la création.', 'error');
+            }
+        })
+        .catch(error => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            console.error('Erreur:', error);
+            showNotification('Erreur de connexion.', 'error');
+        });
+    }
+
+    function payerCommande(commandeId) {
+        window.location.href = `/paiement/${commandeId}`;
+    }
+
+    function ajusterPaiement(commandeId) {
+        const modal = document.getElementById('ajustementModal');
+        const content = document.getElementById('ajustementModalContent');
+        
+        content.innerHTML = `
+            <div class="text-center py-8" style="color: var(--color-nav-text); opacity: 0.5;">
+                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                <p>Chargement des informations...</p>
+            </div>
+        `;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        fetch(`/commandes/${commandeId}/info`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erreur lors du chargement');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const montantTotal = data.commande.montant_total;
+                const reductionActuelle = data.commande.reduction || 0;
+                const montantActuel = data.commande.montant_ajuste || montantTotal;
+                
+                content.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="p-3 rounded-lg" style="background-color: var(--color-secondary-light);">
+                            <div class="flex justify-between text-sm">
+                                <span style="color: var(--color-nav-text);">Commande #${data.commande.id}</span>
+                                <span style="color: var(--color-nav-text);">Qté: ${data.commande.quantite}</span>
+                            </div>
+                            <div class="flex justify-between text-sm mt-1">
+                                <span style="color: var(--color-nav-text);">Prix unitaire</span>
+                                <span class="font-medium" style="color: var(--color-nav-text);">${data.commande.prix_unitaire} FCFA</span>
+                            </div>
+                            <div class="flex justify-between text-sm mt-1">
+                                <span style="color: var(--color-nav-text);">Montant total</span>
+                                <span class="font-bold" style="color: var(--color-primary);">${montantTotal.toLocaleString('fr-FR')} FCFA</span>
+                            </div>
+                            <div class="flex justify-between text-sm mt-1" style="border-top: 1px dashed var(--color-nav-border); padding-top: 8px;">
+                                <span style="color: var(--color-nav-text);">Réduction actuelle</span>
+                                <span style="color: #4CAF50;">-${reductionActuelle.toLocaleString('fr-FR')} FCFA</span>
+                            </div>
+                            <div class="flex justify-between text-sm mt-1 font-bold">
+                                <span style="color: var(--color-nav-text);">Montant à payer</span>
+                                <span style="color: var(--color-primary);">${montantActuel.toLocaleString('fr-FR')} FCFA</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-3 p-3 rounded-lg" style="background-color: var(--color-secondary-light);">
+                            <div class="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                                ${data.annonce.image 
+                                    ? `<img src="${data.annonce.image}" class="w-full h-full object-cover">` 
+                                    : `<div class="w-full h-full flex items-center justify-center" style="background-color: var(--color-bg-gray);">
+                                        <i class="fas fa-tag text-lg" style="color: var(--color-primary);"></i>
+                                       </div>`
+                                }
+                            </div>
+                            <div>
+                                <p class="font-semibold text-sm" style="color: var(--color-nav-text);">${data.annonce.titre}</p>
+                                <p class="text-xs" style="color: var(--color-nav-text); opacity: 0.7;">${data.annonce.type}</p>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--color-nav-text);">
+                                Montant de la réduction (FCFA)
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" id="montantReduction" min="0" max="${montantTotal}" value="${reductionActuelle}" 
+                                       class="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2"
+                                       style="border-color: var(--color-nav-border); background-color: var(--color-bg-gray); color: var(--color-nav-text);"
+                                       oninput="calculerNouveauTotal(${montantTotal})">
+                                <span class="text-sm" style="color: var(--color-nav-text); opacity: 0.6;">FCFA</span>
+                            </div>
+                            <div class="flex justify-between text-xs mt-1" style="color: var(--color-nav-text); opacity: 0.5;">
+                                <span>Min: 0</span>
+                                <span>Max: ${montantTotal.toLocaleString('fr-FR')} FCFA</span>
+                            </div>
+                        </div>
+                        
+                        <div class="p-3 rounded-lg" style="background-color: var(--color-secondary-light);">
+                            <div class="flex justify-between text-sm">
+                                <span style="color: var(--color-nav-text);">Nouveau montant à payer</span>
+                                <span class="font-bold" style="color: var(--color-primary);" id="nouveauTotal">
+                                    ${montantActuel.toLocaleString('fr-FR')} FCFA
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-3">
+                            <button onclick="fermerAjustementModal()" 
+                                    class="flex-1 py-2.5 rounded-lg font-medium transition-all duration-300"
+                                    style="background-color: var(--color-secondary-light); color: var(--color-primary-dark);">
+                                Annuler
+                            </button>
+                            <button onclick="confirmerAjustement(${commandeId})" 
+                                    class="flex-1 py-2.5 rounded-lg font-semibold transition-all duration-300 text-white"
+                                    style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));">
+                                <i class="fas fa-check mr-2"></i>
+                                Appliquer
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                content.dataset.montantTotal = montantTotal;
+                content.dataset.reductionActuelle = reductionActuelle;
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                content.innerHTML = `
+                    <div class="text-center py-8" style="color: #DC2626;">
+                        <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+                        <p>Erreur lors du chargement des informations.</p>
+                        <button onclick="fermerAjustementModal()" 
+                                class="mt-4 px-4 py-2 rounded-lg text-white"
+                                style="background: linear-gradient(135deg, #DC2626, #B91C1C);">
+                            Fermer
+                        </button>
+                    </div>
+                `;
+            });
+    }
+
+    function fermerAjustementModal() {
+        const modal = document.getElementById('ajustementModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    function calculerNouveauTotal(montantTotal) {
+        const input = document.getElementById('montantReduction');
+        const nouveauTotalSpan = document.getElementById('nouveauTotal');
+        
+        let reduction = parseFloat(input.value) || 0;
+        
+        if (reduction < 0) {
+            reduction = 0;
+            input.value = 0;
+        }
+        if (reduction > montantTotal) {
+            reduction = montantTotal;
+            input.value = montantTotal;
+        }
+        
+        const nouveauTotal = montantTotal - reduction;
+        nouveauTotalSpan.textContent = nouveauTotal.toLocaleString('fr-FR') + ' FCFA';
+        
+        if (reduction > 0) {
+            nouveauTotalSpan.style.color = '#4CAF50';
+        } else {
+            nouveauTotalSpan.style.color = 'var(--color-primary)';
+        }
+    }
+
+    function confirmerAjustement(commandeId) {
+        const input = document.getElementById('montantReduction');
+        const reduction = parseFloat(input.value) || 0;
+        const content = document.getElementById('ajustementModalContent');
+        const montantTotal = parseFloat(content.dataset.montantTotal) || 0;
+        
+        if (reduction < 0 || reduction > montantTotal) {
+            showNotification('Le montant de la réduction est invalide.', 'error');
+            return;
+        }
+        
+        const btn = document.querySelector('#ajustementModalContent button:last-child');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Traitement...';
+        
+        fetch(`/commandes/${commandeId}/ajuster`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                reduction: reduction
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            
+            if (data.success) {
+                showNotification('Réduction appliquée avec succès !');
+                fermerAjustementModal();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.message || 'Erreur lors de l\'ajustement.', 'error');
+            }
+        })
+        .catch(error => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            console.error('Erreur:', error);
+            showNotification('Erreur de connexion.', 'error');
+        });
+    }
+
+    // ============================================
+    // FONCTIONS DU MODAL DE CONTACT
+    // ============================================
+    function openContactModal(annonceId) {
+        document.getElementById('annonceId').value = annonceId;
+        document.getElementById('contactModal').classList.remove('hidden');
+        document.getElementById('contactModal').classList.add('flex');
+        setTimeout(() => {
+            document.getElementById('modalContent').classList.remove('scale-95');
+            document.getElementById('modalContent').classList.add('scale-100');
+        }, 50);
+    }
+    
+    function closeContactModal() {
+        document.getElementById('modalContent').classList.remove('scale-100');
+        document.getElementById('modalContent').classList.add('scale-95');
+        setTimeout(() => {
+            document.getElementById('contactModal').classList.add('hidden');
+            document.getElementById('contactModal').classList.remove('flex');
+        }, 300);
+    }
 
     // ============================================
     // ENREGISTREMENT AUDIO
@@ -1468,7 +1906,7 @@
     }
 
     // ============================================
-    // INITIALISATION
+    // INITIALISATION AVEC MUTATION OBSERVER
     // ============================================
     document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById('messages-container');
@@ -1476,7 +1914,41 @@
             container.scrollTop = container.scrollHeight;
         }
         
+        // Initialiser le menu contextuel
         initContextMenu();
+        
+        // ============================================
+        // MUTATION OBSERVER - Détecter les nouveaux messages
+        // ============================================
+        const messagesContainer = document.getElementById('messages-container');
+        if (messagesContainer) {
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.addedNodes.length > 0) {
+                        let hasNewMessages = false;
+                        mutation.addedNodes.forEach(function(node) {
+                            if (node.nodeType === 1 && node.classList && node.classList.contains('message-item')) {
+                                hasNewMessages = true;
+                            }
+                            if (node.querySelectorAll) {
+                                if (node.querySelectorAll('.message-item').length > 0) {
+                                    hasNewMessages = true;
+                                }
+                            }
+                        });
+                        
+                        if (hasNewMessages) {
+                            setTimeout(initContextMenu, 100);
+                        }
+                    }
+                });
+            });
+            
+            observer.observe(messagesContainer, {
+                childList: true,
+                subtree: true
+            });
+        }
     });
 
     // Fermer avec Echap
@@ -1489,6 +1961,9 @@
             closeAudioRecorder();
             closeVideoRecorder();
             hideContextMenu();
+            fermerFormulaireCommande();
+            fermerAjustementModal();
+            closeContactModal();
         }
     });
     </script>

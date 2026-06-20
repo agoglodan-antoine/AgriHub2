@@ -28,8 +28,8 @@ class Transporteur extends Model
         return $this->belongsTo(User::class, 'id_user');
     }
 
-    public function transactions()
+    public function commandes()
     {
-        return $this->hasMany(Transaction::class, 'id_transporteur');
+        return $this->hasMany(Commande::class, 'id_transporteur');
     }
 }

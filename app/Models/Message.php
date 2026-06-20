@@ -15,12 +15,15 @@ class Message extends Model
         'id_expediteur',
         'id_destinataire',
         'id_annonce',
+        'id_commande',
         'contenu',
         'date_envoi',
         'est_reponse',
         'reponse_a_id',
         'lu',
-        'has_pieces_jointes'
+        'has_pieces_jointes',
+        'est_demande_commande',
+        'est_demande_paiement'
     ];
 
     protected $casts = [
@@ -28,6 +31,8 @@ class Message extends Model
         'est_reponse' => 'boolean',
         'lu' => 'boolean',
         'has_pieces_jointes' => 'boolean',
+        'est_demande_commande' => 'boolean',
+        'est_demande_paiement' => 'boolean',
     ];
 
     // Relations
@@ -44,6 +49,11 @@ class Message extends Model
     public function annonce()
     {
         return $this->belongsTo(Annonce::class, 'id_annonce');
+    }
+
+    public function commande()
+    {
+        return $this->belongsTo(Commande::class, 'id_commande');
     }
 
     public function reponseA()
@@ -92,5 +102,54 @@ class Message extends Model
     public function getOtherUser($userId)
     {
         return $this->id_expediteur === $userId ? $this->id_destinataire : $this->id_expediteur;
+    }
+
+    public function isDemandeCommande()
+    {
+        return $this->est_demande_commande === true;
+    }
+
+    public function isDemandePaiement()
+    {
+        return $this->est_demande_paiement === true;
+    }
+
+    public function hasAnnonce()
+    {
+        return $this->id_annonce !== null;
+    }
+
+    public function hasCommande()
+    {
+        return $this->id_commande !== null;
+    }
+
+    // Créer un message de demande de commande
+    public static function createDemandeCommande($expediteurId, $destinataireId, $annonceId)
+    {
+        return self::create([
+            'id_expediteur' => $expediteurId,
+            'id_destinataire' => $destinataireId,
+            'id_annonce' => $annonceId,
+            'contenu' => 'AgriHub assure la sécurité de vos commandes.',
+            'est_demande_commande' => true,
+            'date_envoi' => now(),
+        ]);
+    }
+
+    // Créer un message de demande de paiement
+    public static function createDemandePaiement($expediteurId, $destinataireId, $commandeId)
+    {
+        $commande = Commande::find($commandeId);
+        
+        return self::create([
+            'id_expediteur' => $expediteurId,
+            'id_destinataire' => $destinataireId,
+            'id_annonce' => $commande->id_annonce,
+            'id_commande' => $commandeId,
+            'contenu' => 'Payer toujours par AgriHub pour votre sécurité.',
+            'est_demande_paiement' => true,
+            'date_envoi' => now(),
+        ]);
     }
 }

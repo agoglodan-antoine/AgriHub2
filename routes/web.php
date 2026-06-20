@@ -96,6 +96,9 @@ Route::prefix('annonces')->name('annonces.')->group(function () {
         Route::get('/', [AccessoireAnnonceController::class, 'index'])->name('index');
         Route::get('/{id}', [AccessoireAnnonceController::class, 'show'])->name('show');
     });
+    
+    // Route pour récupérer les infos d'une annonce (AJAX)
+    Route::get('/{id}/info', [MessageController::class, 'getAnnonceInfo'])->name('info');
 });
 
 // ============================================
@@ -160,12 +163,20 @@ Route::middleware(['auth'])->group(function () {
 // ROUTES MESSAGERIE (authentifiées - tous rôles)
 // ============================================
 Route::middleware(['auth'])->prefix('messagerie')->name('messagerie.')->group(function () {
+    // Routes principales
     Route::get('/', [MessageController::class, 'index'])->name('index');
     Route::get('/{id}', [MessageController::class, 'show'])->name('show');
     Route::post('/send', [MessageController::class, 'send'])->name('send');
-    Route::put('/{id}', [MessageController::class, 'update'])->name('update'); 
-    Route::post('/start-from-annonce', [MessageController::class, 'startFromAnnonce'])->name('start-from-annonce');
+    Route::put('/{id}', [MessageController::class, 'update'])->name('update');
     Route::delete('/{id}', [MessageController::class, 'destroy'])->name('destroy');
+    
+    // Routes pour les commandes via messages
+    Route::post('/initier-commande', [MessageController::class, 'initierCommande'])->name('initier-commande');
+    Route::post('/creer-commande', [MessageController::class, 'creerCommande'])->name('creer-commande');
+    Route::post('/demander-paiement', [MessageController::class, 'demanderPaiement'])->name('demander-paiement');
+    
+    // Autres routes
+    Route::post('/start-from-annonce', [MessageController::class, 'startFromAnnonce'])->name('start-from-annonce');
     Route::post('/mark-all-read/{id}', [MessageController::class, 'markAllAsRead'])->name('mark-all-read');
     Route::get('/unread-count', [MessageController::class, 'unreadCount'])->name('unread-count');
     Route::get('/download-piece/{id}', [MessageController::class, 'downloadPiece'])->name('download-piece');
@@ -206,6 +217,12 @@ Route::middleware(['auth', 'role:eleveur'])->prefix('eleveur')->name('eleveur.')
     // Gestion des animaux
     Route::resource('/animaux', App\Http\Controllers\Eleveur\AnimalController::class)->except(['show']);
     Route::get('/animaux/{id}', [App\Http\Controllers\Eleveur\AnimalController::class, 'show'])->name('animaux.show');
+    
+    // Gestion des commandes (en tant que vendeur)
+    Route::get('/commandes', [TransactionController::class, 'mesCommandesRecues'])->name('commandes');
+    Route::get('/commandes/{id}', [TransactionController::class, 'showCommande'])->name('commandes.show');
+    Route::put('/commandes/{id}/statut', [TransactionController::class, 'updateStatutCommande'])->name('commandes.update-statut');
+    Route::post('/commandes/{id}/ajuster', [TransactionController::class, 'ajusterPaiement'])->name('commandes.ajuster');
 });
 
 // ============================================
@@ -231,6 +248,9 @@ Route::middleware(['auth', 'role:vendeur_nourriture'])->prefix('vendeur-nourritu
     
     // Commandes reçues
     Route::get('/commandes', [TransactionController::class, 'mesCommandesRecues'])->name('commandes');
+    Route::get('/commandes/{id}', [TransactionController::class, 'showCommande'])->name('commandes.show');
+    Route::put('/commandes/{id}/statut', [TransactionController::class, 'updateStatutCommande'])->name('commandes.update-statut');
+    Route::post('/commandes/{id}/ajuster', [TransactionController::class, 'ajusterPaiement'])->name('commandes.ajuster');
     
     // Gestion du stock
     Route::get('/stock', [App\Http\Controllers\VendeurNourriture\StockController::class, 'index'])->name('stock');
@@ -260,6 +280,9 @@ Route::middleware(['auth', 'role:vendeur_accessoire'])->prefix('vendeur-accessoi
     
     // Commandes reçues
     Route::get('/commandes', [TransactionController::class, 'mesCommandesRecues'])->name('commandes');
+    Route::get('/commandes/{id}', [TransactionController::class, 'showCommande'])->name('commandes.show');
+    Route::put('/commandes/{id}/statut', [TransactionController::class, 'updateStatutCommande'])->name('commandes.update-statut');
+    Route::post('/commandes/{id}/ajuster', [TransactionController::class, 'ajusterPaiement'])->name('commandes.ajuster');
 });
 
 // ============================================
@@ -274,6 +297,9 @@ Route::middleware(['auth', 'role:acheteur'])->prefix('acheteur')->name('acheteur
     
     // Mes commandes
     Route::get('/mes-commandes', [TransactionController::class, 'mesCommandes'])->name('mes-commandes');
+    Route::get('/commandes/{id}', [TransactionController::class, 'showCommande'])->name('commandes.show');
+    Route::get('/commandes/{id}/paiement', [TransactionController::class, 'pagePaiement'])->name('paiement');
+    Route::post('/commandes/{id}/paiement', [TransactionController::class, 'processPaiement'])->name('paiement.process');
     
     // Favoris
     Route::get('/favoris', [App\Http\Controllers\Acheteur\FavoriController::class, 'index'])->name('favoris');
@@ -320,6 +346,11 @@ Route::middleware(['auth', 'role:transporteur'])->prefix('transporteur')->name('
     // Tarifs
     Route::get('/tarifs', [App\Http\Controllers\Transporteur\TarifController::class, 'index'])->name('tarifs');
     Route::put('/tarifs', [App\Http\Controllers\Transporteur\TarifController::class, 'update'])->name('tarifs.update');
+    
+    // Commandes de transport
+    Route::get('/commandes', [TransactionController::class, 'mesCommandesTransport'])->name('commandes');
+    Route::get('/commandes/{id}', [TransactionController::class, 'showCommande'])->name('commandes.show');
+    Route::put('/commandes/{id}/accepter', [TransactionController::class, 'accepterTransport'])->name('commandes.accepter');
 });
 
 // ============================================
@@ -386,6 +417,36 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
 Route::middleware(['auth', 'role:eleveur,veterinaire,transporteur'])->prefix('professionnel')->name('professionnel.')->group(function () {
     Route::get('/calendrier', [App\Http\Controllers\CalendrierController::class, 'index'])->name('calendrier');
     Route::get('/statistiques', [App\Http\Controllers\StatistiqueController::class, 'index'])->name('statistiques');
+});
+
+// ============================================
+// ROUTES COMMANDES (API/AJAX)
+// ============================================
+Route::middleware(['auth'])->prefix('commandes')->name('commandes.')->group(function () {
+    // Route pour récupérer les infos d'une commande (AJAX)
+    Route::get('/{id}/info', [TransactionController::class, 'getCommandeInfo'])->name('info');
+    // Route pour ajuster le paiement (AJAX)
+    Route::post('/{id}/ajuster', [TransactionController::class, 'ajusterPaiement'])->name('ajuster');
+    // Route pour afficher une commande (pour les fournisseurs)
+    Route::get('/{id}', [TransactionController::class, 'showCommande'])->name('show');
+});
+
+// ============================================
+// ROUTES DE PAIEMENT - COMPLÈTES
+// ============================================
+Route::middleware(['auth'])->prefix('paiement')->name('paiement.')->group(function () {
+    // Page de paiement
+    Route::get('/{commandeId}', [TransactionController::class, 'pagePaiement'])->name('page');
+    // Traitement du paiement
+    Route::post('/{commandeId}/process', [TransactionController::class, 'processPaiement'])->name('process');
+    // Page de succès
+    Route::get('/{commandeId}/succes', [TransactionController::class, 'paiementSucces'])->name('succes');
+    // Page d'échec
+    Route::get('/{commandeId}/echec', [TransactionController::class, 'paiementEchec'])->name('echec');
+    // Initier un paiement depuis un message
+    Route::post('/initier', [TransactionController::class, 'initierPaiement'])->name('initier');
+    // Vérifier le statut d'un paiement
+    Route::get('/{commandeId}/statut', [TransactionController::class, 'verifierStatut'])->name('statut');
 });
 
 // Inclusion des routes d'authentification

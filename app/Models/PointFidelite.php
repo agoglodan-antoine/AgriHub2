@@ -15,7 +15,7 @@ class PointFidelite extends Model
         'id_user',
         'montant_points',
         'type_operation',
-        'id_transaction_source',
+        'id_commande',
         'date_expiration'
     ];
 
@@ -26,19 +26,36 @@ class PointFidelite extends Model
         'date_expiration' => 'date',
     ];
 
+    // ============================================
+    // RELATIONS
+    // ============================================
+
     public function user()
     {
         return $this->belongsTo(User::class, 'id_user');
     }
 
-    public function transaction()
+    public function commande()
     {
-        return $this->belongsTo(Transaction::class, 'id_transaction_source');
+        return $this->belongsTo(Commande::class, 'id_commande');
     }
 
-    // Vérifier si les points sont expirés
+    // ============================================
+    // MÉTHODES
+    // ============================================
+
     public function isExpired()
     {
         return $this->date_expiration && $this->date_expiration < now();
+    }
+
+    public function isGain()
+    {
+        return $this->type_operation === 'gain';
+    }
+
+    public function isDepense()
+    {
+        return $this->type_operation === 'depense';
     }
 }

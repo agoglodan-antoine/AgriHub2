@@ -16,7 +16,7 @@ class ViewComposerServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Récupérer les paramètres une seule fois pour les mettre en cache
-        $settings = Parametre::first();
+        $settings = Parametre::first() ?? null;
         
         if (!$settings) {
             $settings = (object)[
