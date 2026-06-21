@@ -6,19 +6,20 @@ use App\Http\Controllers\Annonce\AnimalAnnonceController;
 use App\Http\Controllers\Annonce\EscrementAnnonceController;
 use App\Http\Controllers\Annonce\AlimentAnnonceController;
 use App\Http\Controllers\Annonce\AccessoireAnnonceController;
-use App\Http\Controllers\ServiceVeterinaireController;
-use App\Http\Controllers\TransporteurController;
+use App\Http\Controllers\Service\VeterinaireController;
+use App\Http\Controllers\Service\TransporteurController;
+use App\Http\Controllers\Service\ServiceController;
 use App\Http\Controllers\RecompenseController;
 use App\Http\Controllers\FAQController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\PaiementController;
-use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\AnnonceAdminController;
 use App\Http\Controllers\Admin\PaiementAdminController;
 use App\Http\Controllers\Admin\ParametreController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\DashboardController as UserDashboardController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MessageController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,9 +38,10 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 // Recherche globale
 Route::get('/search', [HomeController::class, 'search'])->name('global.search');
 
-
-// Dashboard (redirige vers le dashboard selon le rôle)
-Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('dashboard');
+// ============================================
+// ROUTES API POUR LES COMMUNES
+// ============================================
+Route::get('/api/communes/{departement}', [App\Http\Controllers\Auth\RegisteredUserController::class, 'getCommunesByDepartement'])->name('api.communes');
 
 // FAQ
 Route::get('/faq', [FAQController::class, 'index'])->name('faq');
@@ -66,10 +68,13 @@ Route::get('/mentions-legales', function () {
 })->name('mentions-legales');
 
 // ============================================
-// ROUTES DES ANNONCES (Nouvelle structure)
+// ROUTES DES ANNONCES
 // ============================================
 Route::prefix('annonce')->name('annonce.')->group(function () {
 
+    // ============================================
+    // ANNONCES D'ANIMAUX
+    // ============================================
     Route::prefix('animal')->name('animal.')->group(function () {
         // Routes publiques
         Route::get('/', [AnimalAnnonceController::class, 'index'])->name('index');
@@ -89,6 +94,9 @@ Route::prefix('annonce')->name('annonce.')->group(function () {
         });
     });
 
+    // ============================================
+    // ANNONCES D'ESCREMENTS / FUMIER
+    // ============================================
     Route::prefix('escrement')->name('escrement.')->group(function () {
         // Routes publiques
         Route::get('/', [EscrementAnnonceController::class, 'index'])->name('index');
@@ -107,6 +115,9 @@ Route::prefix('annonce')->name('annonce.')->group(function () {
         });
     });
 
+    // ============================================
+    // ANNONCES D'ALIMENTS / PROVENDES
+    // ============================================
     Route::prefix('aliment')->name('aliment.')->group(function () {
         // Routes publiques
         Route::get('/', [AlimentAnnonceController::class, 'index'])->name('index');
@@ -126,6 +137,9 @@ Route::prefix('annonce')->name('annonce.')->group(function () {
         });
     });
 
+    // ============================================
+    // ANNONCES D'ACCESSOIRES
+    // ============================================
     Route::prefix('accessoire')->name('accessoire.')->group(function () {
         // Routes publiques
         Route::get('/', [AccessoireAnnonceController::class, 'index'])->name('index');
@@ -146,14 +160,15 @@ Route::prefix('annonce')->name('annonce.')->group(function () {
     });
 
     // ============================================
-    // ROUTE POUR RÉCUPÉRER LES INFOS D'UNE ANNONCE (AJAX)
+    // TOUTES LES ANNONCES
     // ============================================
-    Route::get('/{id}/info', [MessageController::class, 'getAnnonceInfo'])->name('info');
-
-    // Routes pour toutes les annonces (publiques)
     Route::get('/', [AllAnnonceController::class, 'index'])->name('all.index');
     Route::get('/{id}', [AllAnnonceController::class, 'show'])->name('all.show');
 
+    // ============================================
+    // ROUTE POUR RÉCUPÉRER LES INFOS D'UNE ANNONCE (AJAX)
+    // ============================================
+    Route::get('/{id}/info', [MessageController::class, 'getAnnonceInfo'])->name('info');
 });
 
 // ============================================
@@ -167,6 +182,50 @@ Route::prefix('api/annonce')->name('api.annonce.')->group(function () {
     Route::get('/animaux', [AnimalAnnonceController::class, 'getAnimauxByUser'])
         ->name('animaux')
         ->middleware('auth');
+});
+
+// ============================================
+// ROUTES DES SERVICES
+// ============================================
+Route::prefix('service')->name('service.')->group(function () {
+    
+    // Routes pour tous les services
+    Route::get('/', [ServiceController::class, 'index'])->name('index');
+    
+    // ============================================
+    // ROUTES POUR LES VÉTÉRINAIRES
+    // ============================================
+    Route::prefix('veterinaire')->name('veterinaire.')->group(function () {
+        // Routes publiques
+        Route::get('/', [VeterinaireController::class, 'index'])->name('index');
+        Route::get('/{id}', [VeterinaireController::class, 'show'])->name('show');
+        Route::get('/{id}/disponibilites', [VeterinaireController::class, 'getDisponibilites'])->name('disponibilites');
+        
+        // Routes protégées (authentification requise)
+        Route::middleware(['auth'])->group(function () {
+            // Route GET pour afficher le formulaire de rendez-vous
+            Route::get('/{id}/rendez-vous', [VeterinaireController::class, 'rendezVousForm'])->name('rendez-vous.form');
+            // Route POST pour soumettre la demande de rendez-vous
+            Route::post('/{id}/rendez-vous', [VeterinaireController::class, 'prendreRendezVous'])->name('rendez-vous');
+        });
+    });
+    
+    // ============================================
+    // ROUTES POUR LES TRANSPORTEURS
+    // ============================================
+    Route::prefix('transporteur')->name('transporteur.')->group(function () {
+        // Routes publiques
+        Route::get('/', [TransporteurController::class, 'index'])->name('index');
+        Route::get('/{id}', [TransporteurController::class, 'show'])->name('show');
+        
+        // Routes protégées (authentification requise)
+        Route::middleware(['auth'])->group(function () {
+            // Route GET pour afficher le formulaire de devis
+            Route::get('/{id}/devis', [TransporteurController::class, 'devisForm'])->name('devis.form');
+            // Route POST pour soumettre la demande de devis
+            Route::post('/{id}/devis', [TransporteurController::class, 'demanderDevis'])->name('devis');
+        });
+    });
 });
 
 // ============================================
@@ -184,11 +243,27 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+// ============================================
+// ROUTES DASHBOARD (authentifiées - tous rôles)
+// ============================================
+Route::middleware(['auth'])->prefix('dashboard')->name('dashboard.')->group(function () {
+    // Tableau de bord
+    Route::get('/', [DashboardController::class, 'index'])->name('index');
     
-    // Dashboard utilisateur
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    // Commandes
+    Route::get('/commandes', [DashboardController::class, 'commandes'])->name('commandes');
+    Route::get('/commandes/{id}', [DashboardController::class, 'commandeShow'])->name('commande.show');
+    
+    // Paiements
+    Route::get('/paiements', [DashboardController::class, 'paiements'])->name('paiements');
+    Route::get('/paiements/{id}', [DashboardController::class, 'paiementShow'])->name('paiement.show');
+    
+    // Points de fidélité
+    Route::get('/points-fidelite', [DashboardController::class, 'pointsFidelite'])->name('points-fidelite');
+    Route::post('/points-fidelite/echanger', [DashboardController::class, 'echangerPoints'])->name('points-fidelite.echanger');
+    Route::get('/mes-recompenses', [DashboardController::class, 'mesRecompenses'])->name('mes-recompenses');
 });
 
 // ============================================
@@ -248,7 +323,7 @@ Route::middleware(['auth'])->prefix('paiement')->name('paiement.')->group(functi
 // ============================================
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard admin
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
     
     // Gestion des utilisateurs
     Route::resource('users', UserController::class)->except(['show']);

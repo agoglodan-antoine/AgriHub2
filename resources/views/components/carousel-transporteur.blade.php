@@ -3,62 +3,89 @@
 <div class="group rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl" 
      style="background-color: var(--color-bg-white); box-shadow: 0 4px 15px rgba(0,0,0,0.06); border: 1px solid var(--color-nav-border);">
     
-    <div class="relative h-28 flex items-center justify-center" style="background: linear-gradient(135deg, var(--color-secondary), var(--color-secondary-light));">
-        @php
-            $avatar = $transporteur->avatar ?? null;
-        @endphp
-        
-        @if($avatar && file_exists(public_path($avatar)))
-            <img src="{{ asset($avatar) }}" 
-                 alt="Photo" 
-                 class="w-16 h-16 rounded-full object-cover border-3 shadow-lg"
-                 style="border-color: var(--color-primary);">
-        @else
-            <div class="w-16 h-16 rounded-full flex items-center justify-center border-3 shadow-lg"
-                 style="border-color: var(--color-primary); background-color: var(--color-bg-white);">
-                <i class="fas fa-truck text-2xl" style="color: var(--color-primary);"></i>
-            </div>
-        @endif
-    </div>
-    
-    <div class="p-3">
-        <h4 class="text-sm font-bold mb-0.5 text-center" style="color: var(--color-nav-text);">
-            {{ $transporteur->prenom ?? '' }} {{ Str::limit($transporteur->nom ?? 'Transporteur', 10) }}
-        </h4>
-        
-        <p class="text-[10px] text-center mb-2" style="color: var(--color-nav-text); opacity: 0.6;">
-            <i class="fas fa-map-marker-alt mr-1" style="color: var(--color-primary);"></i>
-            {{ $transporteur->transporteur->zone_intervention ?? $transporteur->ville ?? $transporteur->commune ?? 'Bénin' }}
-        </p>
-        
-        <div class="space-y-1 mb-2">
-            <div class="flex items-center justify-between text-[10px]">
-                <span style="color: var(--color-nav-text); opacity: 0.6;">
-                    <i class="fas fa-truck mr-1" style="color: var(--color-primary);"></i>
-                    Véhicule
-                </span>
-                <span class="font-semibold" style="color: var(--color-nav-text);">
-                    {{ Str::limit($transporteur->transporteur->type_vehicule ?? 'N/A', 12) }}
-                </span>
-            </div>
-            <div class="flex items-center justify-between text-[10px]">
-                <span style="color: var(--color-nav-text); opacity: 0.6;">
-                    <i class="fas fa-weight-hanging mr-1" style="color: var(--color-primary);"></i>
-                    Capacité
-                </span>
-                <span class="font-semibold" style="color: var(--color-nav-text);">
-                    {{ $transporteur->transporteur->capacite_transport ?? 'N/A' }} kg
-                </span>
+    <a href="{{ route('service.transporteur.show', $transporteur->id) }}" class="block">
+        <div class="relative h-28 flex items-center justify-center" style="background: linear-gradient(135deg, var(--color-secondary), var(--color-secondary-light));">
+            @php
+                $avatar = $transporteur->avatar ?? null;
+            @endphp
+            
+            @if($avatar && file_exists(public_path($avatar)))
+                <img src="{{ asset($avatar) }}" 
+                     alt="Photo" 
+                     class="w-16 h-16 rounded-full object-cover border-3 shadow-lg"
+                     style="border-color: var(--color-primary);">
+            @else
+                <div class="w-16 h-16 rounded-full flex items-center justify-center border-3 shadow-lg"
+                     style="border-color: var(--color-primary); background-color: var(--color-bg-white);">
+                    <i class="fas fa-truck text-2xl" style="color: var(--color-primary);"></i>
+                </div>
+            @endif
+            
+            <!-- Badge de statut -->
+            <div class="absolute bottom-1 right-2 px-2 py-0.5 rounded-full text-[8px] font-semibold text-white backdrop-blur-md"
+                 style="background: rgba(0,0,0,0.5);">
+                <i class="fas fa-circle text-green-400 mr-0.5"></i>
+                Disponible
             </div>
         </div>
         
-        <a href="#" 
-           class="flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-[10px] font-medium transition-all duration-300 text-white"
-           style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));"
-           onmouseover="this.style.background='linear-gradient(135deg, var(--color-primary-dark), var(--color-secondary))'; this.style.transform='translateY(-1px)'"
-           onmouseout="this.style.background='linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))'; this.style.transform='translateY(0)'">
-            <i class="fas fa-phone-alt text-[8px]"></i>
-            Contacter
-        </a>
-    </div>
+        <div class="p-3">
+            <h4 class="text-sm font-bold mb-0.5 text-center" style="color: var(--color-nav-text);">
+                {{ $transporteur->prenom ?? '' }} {{ Str::limit($transporteur->nom ?? 'Transporteur', 10) }}
+            </h4>
+            
+            <p class="text-[10px] text-center mb-2" style="color: var(--color-nav-text); opacity: 0.6;">
+                <i class="fas fa-map-marker-alt mr-1" style="color: var(--color-primary);"></i>
+                {{ $transporteur->transporteur->zone_intervention ?? $transporteur->ville ?? $transporteur->commune ?? 'Bénin' }}
+            </p>
+            
+            <div class="space-y-1 mb-2">
+                <div class="flex items-center justify-between text-[10px]">
+                    <span style="color: var(--color-nav-text); opacity: 0.6;">
+                        <i class="fas fa-truck mr-1" style="color: var(--color-primary);"></i>
+                        Véhicule
+                    </span>
+                    <span class="font-semibold" style="color: var(--color-nav-text);">
+                        {{ Str::limit($transporteur->transporteur->type_vehicule ?? 'N/A', 12) }}
+                    </span>
+                </div>
+                <div class="flex items-center justify-between text-[10px]">
+                    <span style="color: var(--color-nav-text); opacity: 0.6;">
+                        <i class="fas fa-weight-hanging mr-1" style="color: var(--color-primary);"></i>
+                        Capacité
+                    </span>
+                    <span class="font-semibold" style="color: var(--color-nav-text);">
+                        {{ $transporteur->transporteur->capacite_transport ?? 'N/A' }} kg
+                    </span>
+                </div>
+            </div>
+            
+            <div class="flex gap-1.5">
+                <a href="{{ route('service.transporteur.show', $transporteur->id) }}" 
+                   class="flex-1 text-center py-1.5 rounded-lg text-[10px] font-medium transition-all duration-300"
+                   style="background: var(--color-secondary-light); color: var(--color-primary-dark);"
+                   onmouseover="this.style.background='var(--color-secondary)'"
+                   onmouseout="this.style.background='var(--color-secondary-light)'">
+                    <i class="fas fa-user text-[8px] mr-0.5"></i> Profil
+                </a>
+                @auth
+                    <a href="{{ route('service.transporteur.devis.form', $transporteur->id) }}" 
+                       class="flex-1 text-center py-1.5 rounded-lg text-[10px] font-medium transition-all duration-300 text-white"
+                       style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));"
+                       onmouseover="this.style.background='linear-gradient(135deg, var(--color-primary-dark), var(--color-secondary))'"
+                       onmouseout="this.style.background='linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))'">
+                        <i class="fas fa-file-invoice text-[8px] mr-0.5"></i> Demander devis
+                    </a>
+                @else
+                    <a href="{{ route('login') }}" 
+                       class="flex-1 text-center py-1.5 rounded-lg text-[10px] font-medium transition-all duration-300 text-white"
+                       style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));"
+                       onmouseover="this.style.background='linear-gradient(135deg, var(--color-primary-dark), var(--color-secondary))'"
+                       onmouseout="this.style.background='linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))'">
+                        <i class="fas fa-file-invoice text-[8px] mr-0.5"></i> Demander devis
+                    </a>
+                @endauth
+            </div>
+        </div>
+    </a>
 </div>

@@ -220,7 +220,7 @@
                             <i class="fas fa-user-plus mr-2"></i> Créer un compte gratuit
                         </a>
                     @else
-                        <a href="{{ route('dashboard') }}" class="px-8 py-3 rounded-full font-semibold transition transform hover:scale-105 shadow-lg" style="background-color: #1F2937; color: white;">
+                        <a href="{{ route('dashboard.index') }}" class="px-8 py-3 rounded-full font-semibold transition transform hover:scale-105 shadow-lg" style="background-color: #1F2937; color: white;">
                             <i class="fas fa-tachometer-alt mr-2"></i> Accéder à mon dashboard
                         </a>
                     @endguest

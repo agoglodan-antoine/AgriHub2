@@ -80,19 +80,19 @@
                                     <p class="text-xs mt-1" style="color: var(--color-secondary);">{{ Auth::user()->email }}</p>
                                 </div>
                                 
-                                <a href="{{ route('dashboard') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
+                                <a href="{{ route('dashboard.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-tachometer-alt w-5 mr-3" style="color: var(--color-primary);"></i> Dashboard
                                 </a>
                                 <a href="{{ route('profile.edit') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-user w-5 mr-3" style="color: var(--color-primary);"></i> Mon profil
                                 </a>
-                                <a href="{{ route('annonce.animal.mes-annonces') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
-                                    <i class="fas fa-box w-5 mr-3" style="color: var(--color-primary);"></i> Mes annonces
+                                <a href="{{ route('dashboard.commandes') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
+                                    <i class="fas fa-shopping-cart w-5 mr-3" style="color: var(--color-primary);"></i> Mes commandes
                                 </a>
-                                <a href="#" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
-                                    <i class="fas fa-exchange-alt w-5 mr-3" style="color: var(--color-primary);"></i> Mes transactions
+                                <a href="{{ route('dashboard.paiements') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
+                                    <i class="fas fa-credit-card w-5 mr-3" style="color: var(--color-primary);"></i> Mes paiements
                                 </a>
-                                <a href="{{ route('recompenses.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
+                                <a href="{{ route('dashboard.points-fidelite') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-gem w-5 mr-3" style="color: var(--color-primary);"></i> Mes points
                                 </a>
                                 
@@ -187,7 +187,6 @@
                                     <i class="fas fa-tools w-5 mr-3" style="color: var(--color-primary);"></i> Accessoires
                                 </a>
                                 <div class="border-t my-1" style="border-color: var(--color-nav-border);"></div>
-                                <!-- Lien vers toutes les annonces -->
                                 <a href="{{ route('annonce.all.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-list w-5 mr-3" style="color: var(--color-primary);"></i> Toutes les annonces
                                 </a>
@@ -204,10 +203,13 @@
                         
                         <div class="absolute top-full left-0 w-56 rounded-lg opacity-0 invisible group-hover/dropdown:opacity-100 group-hover/dropdown:visible transition-all duration-200 z-50 shadow-lg" style="background-color: var(--color-bg-white); border: 1px solid var(--color-nav-border);">
                             <div class="py-2">
-                                <a href="#" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
+                                <a href="{{ route('service.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
+                                    <i class="fas fa-concierge-bell w-5 mr-3" style="color: var(--color-primary);"></i> Tous les services
+                                </a>
+                                <a href="{{ route('service.veterinaire.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-stethoscope w-5 mr-3" style="color: var(--color-primary);"></i> Vétérinaires
                                 </a>
-                                <a href="#" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
+                                <a href="{{ route('service.transporteur.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-truck w-5 mr-3" style="color: var(--color-primary);"></i> Transporteurs
                                 </a>
                             </div>
@@ -216,7 +218,7 @@
                     
                     <!-- Dashboard -->
                     @auth
-                        <a href="{{ route('dashboard') }}" class="font-medium transition relative group" style="color: var(--color-nav-text);">
+                        <a href="{{ route('dashboard.index') }}" class="font-medium transition relative group" style="color: var(--color-nav-text);">
                             Dashboard
                             <span class="absolute bottom-0 left-0 w-0 h-0.5 transition-all group-hover:w-full" style="background-color: var(--color-primary);"></span>
                         </a>
@@ -274,17 +276,9 @@
                         <i class="fas fa-tools w-5 mr-3" style="color: var(--color-primary);"></i> Accessoires
                     </a>
                     <div class="border-t my-1" style="border-color: var(--color-nav-border);"></div>
-                    <!-- Lien vers toutes les annonces -->
                     <a href="{{ route('annonce.all.index') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
                         <i class="fas fa-list w-5 mr-3" style="color: var(--color-primary);"></i> Toutes les annonces
                     </a>
-                    
-                    @auth
-                        <div class="border-t my-1" style="border-color: var(--color-nav-border);"></div>
-                        <a href="{{ route('annonce.animal.mes-annonces') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
-                            <i class="fas fa-box w-5 mr-3" style="color: var(--color-primary);"></i> Mes annonces
-                        </a>
-                    @endauth
                 </div>
             </div>
             
@@ -295,10 +289,13 @@
                     <i class="fas fa-chevron-down text-xs transition-transform" :class="{'rotate-180': open}" style="color: var(--color-nav-text);"></i>
                 </button>
                 <div x-show="open" x-collapse class="pl-6 space-y-1 mt-1">
-                    <a href="#" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
+                    <a href="{{ route('service.index') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
+                        <i class="fas fa-concierge-bell w-5 mr-3" style="color: var(--color-primary);"></i> Tous les services
+                    </a>
+                    <a href="{{ route('service.veterinaire.index') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
                         <i class="fas fa-stethoscope w-5 mr-3" style="color: var(--color-primary);"></i> Vétérinaires
                     </a>
-                    <a href="#" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
+                    <a href="{{ route('service.transporteur.index') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
                         <i class="fas fa-truck w-5 mr-3" style="color: var(--color-primary);"></i> Transporteurs
                     </a>
                 </div>
@@ -306,7 +303,7 @@
             
             <!-- Dashboard mobile -->
             @auth
-                <a href="{{ route('dashboard') }}" class="flex items-center py-3 px-3 rounded-lg transition font-medium" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
+                <a href="{{ route('dashboard.index') }}" class="flex items-center py-3 px-3 rounded-lg transition font-medium" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
                     <i class="fas fa-tachometer-alt w-5 mr-3" style="color: var(--color-primary);"></i> Dashboard
                 </a>
                 
@@ -323,7 +320,7 @@
                 </a>
                 
                 <!-- Points de fidélité mobile -->
-                <a href="{{ route('recompenses.index') }}" class="flex items-center py-3 px-3 rounded-lg transition font-medium" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
+                <a href="{{ route('dashboard.points-fidelite') }}" class="flex items-center py-3 px-3 rounded-lg transition font-medium" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
                     <i class="fas fa-gem w-5 mr-3" style="color: var(--color-primary);"></i> Mes points
                 </a>
             @else
