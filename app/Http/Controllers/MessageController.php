@@ -8,6 +8,9 @@ use App\Models\User;
 use App\Models\Commande;
 use App\Models\MessagePieceJointe;
 use App\Services\MessageLogger;
+use App\Events\NewMessageEvent;
+use App\Events\MessageUpdatedEvent;
+use App\Events\MessageDeletedEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -299,6 +302,12 @@ class MessageController extends Controller
                 'annonce.escrement',
                 'commande'
             ]);
+
+            // ============================================
+            // DIFFUSER LE NOUVEAU MESSAGE EN TEMPS RÉEL
+            // ============================================
+            $conversationId = $this->getConversationId($message->id_expediteur, $message->id_destinataire);
+            broadcast(new NewMessageEvent($message, $conversationId))->toOthers();
 
             // Journaliser le succès
             $filesInfo = !empty($uploadedFiles) ? implode(', ', $uploadedFiles) : 'Aucun fichier';
@@ -746,10 +755,20 @@ class MessageController extends Controller
 
     /**
      * Rendre un message en HTML pour AJAX
+     *
+     * @param Message $message
+     * @param int|null $viewerId  ID de l'utilisateur dont on adopte le point de vue
+     *                            (alignement, rôle vendeur/acheteur, etc.).
+     *                            Par défaut : l'utilisateur authentifié de la
+     *                            requête en cours. À fournir explicitement
+     *                            lors d'une diffusion WebSocket, où la requête
+     *                            HTTP est celle de l'EXPÉDITEUR mais le HTML
+     *                            généré doit refléter le point de vue du
+     *                            DESTINATAIRE qui va réellement le recevoir.
      */
-    public function renderMessage(Message $message): string
+    public function renderMessage(Message $message, ?int $viewerId = null): string
     {
-        $currentUserId = Auth::id();
+        $currentUserId = $viewerId ?? Auth::id();
         $isMine = $message->id_expediteur === $currentUserId;
                     
         // ============================================
@@ -1080,29 +1099,6 @@ class MessageController extends Controller
         return $html;
     }
 
-    /**
-    * Rendre un message en HTML pour un utilisateur spécifique (utilisé par SSE)
-    */
-    public function renderMessageForUser(Message $message, int $userId): string
-    {
-        // Sauvegarder l'utilisateur actuel
-        $originalUser = Auth::user();
-                    
-        // Forcer l'authentification avec l'ID utilisateur
-        Auth::loginUsingId($userId);
-                    
-        // Rendre le message
-        $html = $this->renderMessage($message);
-                    
-        // Restaurer l'utilisateur original
-        if ($originalUser) {
-            Auth::login($originalUser);
-        } else {
-            Auth::logout();
-        }
-                    
-        return $html;
-    }
 
     /**
      * Rendre une pièce jointe en HTML
@@ -1177,6 +1173,17 @@ class MessageController extends Controller
                 'updated_at' => now(),
             ]);
 
+            // ============================================
+            // DIFFUSER LA MODIFICATION EN TEMPS RÉEL
+            // ============================================
+            $conversationId = $this->getConversationId($message->id_expediteur, $message->id_destinataire);
+            broadcast(new MessageUpdatedEvent(
+                $message->id,
+                $conversationId,
+                $message->contenu,
+                $message->updated_at->format('d/m/Y H:i')
+            ))->toOthers();
+
             MessageLogger::logSuccess('MODIFICATION_MESSAGE', $message, [
                 'info' => "Ancien contenu: " . substr($oldContent, 0, 30) . (strlen($oldContent) > 30 ? '...' : '')
             ]);
@@ -1223,6 +1230,12 @@ class MessageController extends Controller
                 }
                 $piece->delete();
             }
+
+            // ============================================
+            // DIFFUSER LA SUPPRESSION EN TEMPS RÉEL
+            // ============================================
+            $conversationId = $this->getConversationId($message->id_expediteur, $message->id_destinataire);
+            broadcast(new MessageDeletedEvent($message->id, $conversationId))->toOthers();
 
             $message->delete();
 
@@ -1336,6 +1349,12 @@ class MessageController extends Controller
                 'est_demande_paiement' => false,
             ]);
 
+            // ============================================
+            // DIFFUSER LE NOUVEAU MESSAGE EN TEMPS RÉEL
+            // ============================================
+            $conversationId = $this->getConversationId($message->id_expediteur, $message->id_destinataire);
+            broadcast(new NewMessageEvent($message, $conversationId))->toOthers();
+
             MessageLogger::logSuccess('DEMARRAGE_CONVERSATION', $message, [
                 'info' => "Nouvelle conversation démarrée via l'annonce ID={$request->id_annonce}"
             ]);
@@ -1446,6 +1465,12 @@ class MessageController extends Controller
                 'has_pieces_jointes' => false,
             ]);
 
+            // ============================================
+            // DIFFUSER LA DEMANDE DE COMMANDE EN TEMPS RÉEL
+            // ============================================
+            $conversationId = $this->getConversationId($message->id_expediteur, $message->id_destinataire);
+            broadcast(new NewMessageEvent($message, $conversationId))->toOthers();
+
             $message->load([
                 'expediteur', 
                 'destinataire', 
@@ -1549,6 +1574,12 @@ class MessageController extends Controller
                 $commande->id
             );
 
+            // ============================================
+            // DIFFUSER LE MESSAGE DE PAIEMENT EN TEMPS RÉEL
+            // ============================================
+            $conversationId = $this->getConversationId($messagePaiement->id_expediteur, $messagePaiement->id_destinataire);
+            broadcast(new NewMessageEvent($messagePaiement, $conversationId))->toOthers();
+
             MessageLogger::logSuccess('CREER_COMMANDE', $message, [
                 'commande_id' => $commande->id,
                 'quantite' => $request->quantite,
@@ -1610,6 +1641,12 @@ class MessageController extends Controller
                 $commande->id_acheteur,
                 $request->id_commande
             );
+
+            // ============================================
+            // DIFFUSER LA DEMANDE DE PAIEMENT EN TEMPS RÉEL
+            // ============================================
+            $conversationId = $this->getConversationId($message->id_expediteur, $message->id_destinataire);
+            broadcast(new NewMessageEvent($message, $conversationId))->toOthers();
 
             $message->load([
                 'expediteur', 
@@ -1727,5 +1764,13 @@ class MessageController extends Controller
         } catch (Throwable $e) {
             return response()->json(['error' => 'Annonce non trouvée'], 404);
         }
+    }
+
+    /**
+     * Récupérer l'ID de conversation unique
+     */
+    private function getConversationId($userId1, $userId2): string
+    {
+        return min($userId1, $userId2) . '_' . max($userId1, $userId2);
     }
 }

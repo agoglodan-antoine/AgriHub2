@@ -4,7 +4,7 @@
     icon="truck"
     badge="🚚 Logistique"
     :items="$transporteurs"
-    route="{{ route('transporteurs.index') }}"
+    route="#"
     routeText="Voir tous les transporteurs"
     type="transporteur"
     bgColor="#1a1a1a"

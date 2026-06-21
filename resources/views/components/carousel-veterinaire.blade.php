@@ -59,14 +59,14 @@
         </div>
         
         <div class="flex gap-1.5">
-            <a href="{{ route('services-veterinaires.show', $veterinaire->id) }}" 
+            <a href="#" 
                class="flex-1 text-center py-1.5 rounded-lg text-[10px] font-medium transition-all duration-300"
                style="background: var(--color-secondary-light); color: var(--color-primary-dark);"
                onmouseover="this.style.background='var(--color-secondary)'"
                onmouseout="this.style.background='var(--color-secondary-light)'">
                 <i class="fas fa-user text-[8px] mr-0.5"></i> Profil
             </a>
-            <a href="{{ route('prendre-rendez-vous', $veterinaire->id) }}" 
+            <a href="#" 
                class="flex-1 text-center py-1.5 rounded-lg text-[10px] font-medium transition-all duration-300 text-white"
                style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));"
                onmouseover="this.style.background='linear-gradient(135deg, var(--color-primary-dark), var(--color-secondary))'"

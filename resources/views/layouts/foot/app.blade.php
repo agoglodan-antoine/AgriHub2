@@ -79,12 +79,12 @@
                 <h4 class="text-lg font-semibold mb-4" style="color: var(--color-primary);">Liens rapides</h4>
                 <ul class="space-y-2">
                     <li><a href="{{ route('home') }}" class="footer-link transition block" style="color: var(--color-nav-text);">Accueil</a></li>
-                    <li><a href="{{ route('annonces.index') }}" class="footer-link transition block" style="color: var(--color-nav-text);">Toutes les annonces</a></li>
+                    <li><a href="#" class="footer-link transition block" style="color: var(--color-nav-text);">Toutes les annonces</a></li>
                     <li><a href="{{ route('annonces.animaux.index') }}" class="footer-link transition block" style="color: var(--color-nav-text);">Animaux</a></li>
                     <li><a href="{{ route('annonces.aliments.index') }}" class="footer-link transition block" style="color: var(--color-nav-text);">Alimentation</a></li>
                     <li><a href="{{ route('annonces.accessoires.index') }}" class="footer-link transition block" style="color: var(--color-nav-text);">Accessoires</a></li>
-                    <li><a href="{{ route('services-veterinaires.index') }}" class="footer-link transition block" style="color: var(--color-nav-text);">Vétérinaires</a></li>
-                    <li><a href="{{ route('transporteurs.index') }}" class="footer-link transition block" style="color: var(--color-nav-text);">Transporteurs</a></li>
+                    <li><a href="#" class="footer-link transition block" style="color: var(--color-nav-text);">Vétérinaires</a></li>
+                    <li><a href="#" class="footer-link transition block" style="color: var(--color-nav-text);">Transporteurs</a></li>
                 </ul>
             </div>
             

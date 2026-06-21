@@ -21,6 +21,12 @@
                             </p>
                         </div>
                     </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-white/60 text-sm">
+                            <i class="fas fa-circle text-green-400 text-xs mr-1"></i>
+                            En ligne
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -30,7 +36,12 @@
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <!-- Messages -->
             <div class="rounded-xl shadow-lg overflow-hidden" style="background-color: var(--color-bg-white);">
-                <div class="p-4 space-y-4 max-h-[500px] overflow-y-auto" id="messages-container">
+                
+                <!-- ✅ CONTAINER CORRIGÉ AVEC data-conversation-id -->
+                <div class="p-4 space-y-4 max-h-[500px] overflow-y-auto" 
+                     id="messages-container"
+                     data-conversation-id="{{ min(Auth::id(), $otherUser->id) }}_{{ max(Auth::id(), $otherUser->id) }}">
+                    
                     @forelse($messages as $message)
                         <!-- Message parent (si c'est une réponse) -->
                         @if($message->est_reponse && $message->reponseA)
@@ -394,8 +405,20 @@
         .file-attachment .file-download:hover {
             opacity: 1;
         }
+
+        /* Notification de nouveau message */
+        .new-message-flash {
+            animation: flashBorder 0.5s ease;
+        }
+        @keyframes flashBorder {
+            0%, 100% { border-color: transparent; }
+            50% { border-color: var(--color-primary); }
+        }
     </style>
 
+    <!-- ============================================ -->
+    <!-- SCRIPTS -->
+    <!-- ============================================ -->
     <script>
     // ============================================
     // CONFIGURATION ET VARIABLES
@@ -420,7 +443,7 @@
     let isSending = false;
 
     // ============================================
-    // ENVOI DU MESSAGE VIA AJAX - CORRIGÉ
+    // ENVOI DU MESSAGE VIA AJAX
     // ============================================
     function sendMessage() {
         if (isSending) {
@@ -502,7 +525,7 @@
             }
         }
         
-        fetch('{{ route("messagerie.send") }}', {
+        fetchWithSocket('{{ route("messagerie.send") }}', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json'
@@ -554,6 +577,11 @@
                 // Réinitialiser le menu contextuel pour les nouveaux messages
                 setTimeout(initContextMenu, 200);
                 
+                // Mettre à jour le compteur de messages non lus
+                if (typeof updateUnreadCount === 'function') {
+                    setTimeout(updateUnreadCount, 500);
+                }
+                
                 showNotification('Message envoyé avec succès !');
             } else {
                 if (data.errors) {
@@ -574,7 +602,7 @@
     }
 
     // ============================================
-    // GESTION DES FICHIERS - SIMPLIFIÉE
+    // GESTION DES FICHIERS
     // ============================================
     function handleFiles(input) {
         const files = Array.from(input.files);
@@ -718,7 +746,7 @@
     }
 
     // ============================================
-    // MENU CONTEXTUEL - CORRIGÉ
+    // MENU CONTEXTUEL
     // ============================================
     let contextMenuTarget = null;
     let longPressTimer = null;
@@ -950,7 +978,7 @@
             return;
         }
         
-        fetch(`/messagerie/${messageId}`, {
+        fetchWithSocket(`/messagerie/${messageId}`, {
             method: 'PUT',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
@@ -985,7 +1013,7 @@
     }
 
     function deleteMessage(messageId) {
-        fetch(`/messagerie/${messageId}`, {
+        fetchWithSocket(`/messagerie/${messageId}`, {
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
@@ -1016,7 +1044,6 @@
     // ============================================
     // FONCTIONS POUR LES COMMANDES
     // ============================================
-
     function initierCommande(annonceId, destinataireId) {
         if (!destinataireId) {
             showNotification('Destinataire non spécifié.', 'error');
@@ -1027,7 +1054,7 @@
             return;
         }
         
-        fetch('{{ route("messagerie.initier-commande") }}', {
+        fetchWithSocket('{{ route("messagerie.initier-commande") }}', {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
@@ -1070,7 +1097,7 @@
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         
-        fetch(`/annonces/${annonceId}/info`)
+        fetchWithSocket(`/annonces/${annonceId}/info`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Erreur lors du chargement des informations');
@@ -1212,7 +1239,7 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Création...';
         
-        fetch('{{ route("messagerie.creer-commande") }}', {
+        fetchWithSocket('{{ route("messagerie.creer-commande") }}', {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
@@ -1245,10 +1272,6 @@
         });
     }
 
-    function payerCommande(commandeId) {
-        window.location.href = `/paiement/${commandeId}`;
-    }
-
     function ajusterPaiement(commandeId) {
         const modal = document.getElementById('ajustementModal');
         const content = document.getElementById('ajustementModalContent');
@@ -1262,7 +1285,7 @@
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         
-        fetch(`/commandes/${commandeId}/info`)
+        fetchWithSocket(`/commandes/${commandeId}/info`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Erreur lors du chargement');
@@ -1422,7 +1445,7 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Traitement...';
         
-        fetch(`/commandes/${commandeId}/ajuster`, {
+        fetchWithSocket(`/commandes/${commandeId}/ajuster`, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
@@ -1455,7 +1478,7 @@
     }
 
     // ============================================
-    // ENREGISTREMENT AUDIO - CORRIGÉ
+    // ENREGISTREMENT AUDIO
     // ============================================
     document.addEventListener('DOMContentLoaded', function() {
         const audioBtn = document.getElementById('audio-record-btn');
@@ -1628,7 +1651,7 @@
     }
 
     // ============================================
-    // ENREGISTREMENT VIDÉO - CORRIGÉ
+    // ENREGISTREMENT VIDÉO
     // ============================================
     document.addEventListener('DOMContentLoaded', function() {
         const videoBtn = document.getElementById('video-record-btn');
@@ -1867,7 +1890,7 @@
     }
 
     // ============================================
-    // FONCTIONS DE NOTIFICATION UNIFIÉES
+    // FONCTIONS DE NOTIFICATION
     // ============================================
     function showError(message) {
         const container = document.getElementById('form-errors');
@@ -1918,47 +1941,61 @@
     }
 
     // ============================================
-    // INITIALISATION
+    // INITIALISATION WEBSOCKET - VERSION CORRIGÉE
     // ============================================
+    // ✅ Supprimer complètement la fonction initReverbListener()
+    // ✅ Utiliser directement window.initConversationListener
+
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 Initialisation de la page show.blade.php');
+                
+        // Faire défiler vers le bas
         const container = document.getElementById('messages-container');
         if (container) {
             container.scrollTop = container.scrollHeight;
-        }
-        
-        // Initialiser le menu contextuel
-        setTimeout(initContextMenu, 100);
-        
-        // MutationObserver pour les nouveaux messages
-        const messagesContainer = document.getElementById('messages-container');
-        if (messagesContainer) {
-            const observer = new MutationObserver(function(mutations) {
-                let hasNewMessages = false;
-                mutations.forEach(function(mutation) {
-                    if (mutation.addedNodes.length > 0) {
-                        mutation.addedNodes.forEach(function(node) {
-                            if (node.nodeType === 1) {
-                                if (node.classList && node.classList.contains('message-item')) {
-                                    hasNewMessages = true;
-                                }
-                                if (node.querySelectorAll && node.querySelectorAll('.message-item').length > 0) {
-                                    hasNewMessages = true;
-                                }
-                            }
-                        });
-                    }
-                });
                 
-                if (hasNewMessages) {
-                    setTimeout(initContextMenu, 200);
+            // Récupérer l'ID de conversation
+            const conversationId = container.dataset.conversationId;
+                
+            if (conversationId) {
+                console.log(`📌 Conversation ID: ${conversationId}`);
+                
+                // Fonction pour démarrer l'écoute
+                const startListening = function() {
+                    if (window.initConversationListener) {
+                        console.log('🔐 Démarrage de l\'écoute WebSocket...');
+                        window.initConversationListener(conversationId);
+                    } else {
+                        console.warn('⚠️ window.initConversationListener non disponible, réessai...');
+                        setTimeout(startListening, 500);
+                    }
+                };
+                
+                // ✅ Attendre que Echo soit prêt ET que le DOM soit chargé
+                if (window.Echo) {
+                    console.log('✅ Echo déjà disponible');
+                    // ✅ Petit délai pour éviter les conflits
+                    setTimeout(startListening, 300);
+                } else {
+                    console.log('⏳ Attente de l\'initialisation d\'Echo...');
+                    document.addEventListener('echo:initialized', function() {
+                        console.log('✅ Echo initialisé');
+                        setTimeout(startListening, 300);
+                    });
+
+                    // Fallback après 5 secondes
+                    setTimeout(function() {
+                        if (!window._activeListener) {
+                            console.warn('⚠️ Echo non initialisé après 5s, tentative forcée...');
+                            startListening();
+                        }
+                    }, 5000);
                 }
-            });
-            
-            observer.observe(messagesContainer, {
-                childList: true,
-                subtree: true
-            });
+            }
         }
+                
+        // Initialiser le menu contextuel
+        setTimeout(initContextMenu, 200);
     });
 
     // Fermer avec Echap
@@ -1979,5 +2016,7 @@
         }
     });
 
+    // Marquer l'initialisation Reverb comme faite
+    window._reverbInitialized = true;
     </script>
 </x-app-layout>

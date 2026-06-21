@@ -53,7 +53,7 @@
                         <span class="absolute inset-0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" 
                               style="background: linear-gradient(135deg, #F59E0B, #D97706);"></span>
                     </a>
-                    <a href="{{ route('annonces.index') }}" class="group px-8 py-4 rounded-full font-bold shadow-xl transition-all duration-300"
+                    <a href="#" class="group px-8 py-4 rounded-full font-bold shadow-xl transition-all duration-300"
                        style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); color: white; border: 2px solid rgba(255,255,255,0.3);"
                        onmouseover="this.style.backgroundColor='rgba(255,255,255,0.25)'; this.style.transform='translateY(-2px)'; this.style.borderColor='rgba(255,255,255,0.5)'"
                        onmouseout="this.style.backgroundColor='rgba(255,255,255,0.15)'; this.style.transform='translateY(0)'; this.style.borderColor='rgba(255,255,255,0.3)'">

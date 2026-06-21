@@ -312,7 +312,7 @@ function ouvrirFormulaireCommande(annonceId, messageId) {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     
-    fetch(`/annonces/${annonceId}/info`)
+    fetchWithSocket(`/annonces/${annonceId}/info`)
         .then(response => {
             if (!response.ok) {
                 throw new Error('Erreur lors du chargement des informations');
@@ -462,7 +462,7 @@ function confirmerCommande(annonceId, messageId) {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Création...';
     
-    fetch('{{ route("messagerie.creer-commande") }}', {
+    fetchWithSocket('{{ route("messagerie.creer-commande") }}', {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
@@ -512,7 +512,7 @@ function ouvrirPaiementModal(commandeId) {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     
-    fetch(`/commandes/${commandeId}/info`)
+    fetchWithSocket(`/commandes/${commandeId}/info`)
         .then(response => {
             if (!response.ok) {
                 throw new Error('Erreur lors du chargement');
@@ -602,7 +602,7 @@ function confirmerPaiement(commandeId) {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Traitement...';
     
-    fetch(`/paiement/${commandeId}/process`, {
+    fetchWithSocket(`/paiement/${commandeId}/process`, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
@@ -648,7 +648,7 @@ function ajusterPaiement(commandeId) {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     
-    fetch(`/commandes/${commandeId}/info`)
+    fetchWithSocket(`/commandes/${commandeId}/info`)
         .then(response => {
             if (!response.ok) {
                 throw new Error('Erreur lors du chargement');
@@ -812,7 +812,7 @@ function confirmerAjustement(commandeId) {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Traitement...';
     
-    fetch(`/commandes/${commandeId}/ajuster`, {
+    fetchWithSocket(`/commandes/${commandeId}/ajuster`, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,

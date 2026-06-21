@@ -4,7 +4,7 @@
     icon="stethoscope"
     badge="🏥 Santé animale"
     :items="$veterinaires"
-    route="{{ route('services-veterinaires.index') }}"
+    route="#"
     routeText="Voir tous les vétérinaires"
     type="veterinaire"
     bgColor="#f8f6f0"

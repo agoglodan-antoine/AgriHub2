@@ -367,7 +367,7 @@
                             
                             <!-- Payer maintenant - UNIQUEMENT pour l'ACHETEUR -->
                             @if($estAcheteur && $message->commande)
-                                <a href="{{ route('acheteur.paiement', $message->commande->id) }}" 
+                                <a href="#" 
                                    class="px-6 py-2.5 rounded-lg text-sm font-bold text-white transition hover:scale-105"
                                    style="background: linear-gradient(135deg, #f44336, #c62828);">
                                     <i class="fas fa-credit-card mr-1"></i> Payer maintenant

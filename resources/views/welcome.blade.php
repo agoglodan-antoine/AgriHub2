@@ -38,7 +38,7 @@
                     <i class="fas fa-map-marker-alt mr-2"></i> Bénin
                 </p>
                 <div class="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
-                    <a href="{{ route('annonces.index') }}" class="px-8 py-3 rounded-full font-semibold transition transform hover:scale-105 shadow-lg" style="background: var(--color-primary); color: #1F2937;">
+                    <a href="#" class="px-8 py-3 rounded-full font-semibold transition transform hover:scale-105 shadow-lg" style="background: var(--color-primary); color: #1F2937;">
                         <i class="fas fa-search mr-2"></i> Explorer les annonces
                     </a>
                     @guest
@@ -200,7 +200,7 @@
         </div>
         
         <div class="text-center mt-10">
-            <a href="{{ route('annonces.index') }}" class="inline-flex items-center px-6 py-3 rounded-full font-semibold transition transform hover:scale-105 shadow-md" style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)); color: #1F2937;">
+            <a href="#" class="inline-flex items-center px-6 py-3 rounded-full font-semibold transition transform hover:scale-105 shadow-md" style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)); color: #1F2937;">
                 Voir toutes les annonces <i class="fas fa-arrow-right ml-2"></i>
             </a>
         </div>
@@ -224,7 +224,7 @@
                             <i class="fas fa-tachometer-alt mr-2"></i> Accéder à mon dashboard
                         </a>
                     @endguest
-                    <a href="{{ route('annonces.index') }}" class="px-8 py-3 rounded-full font-semibold transition transform hover:scale-105 shadow-lg" style="background-color: rgba(255,255,255,0.2); color: white;">
+                    <a href="#" class="px-8 py-3 rounded-full font-semibold transition transform hover:scale-105 shadow-lg" style="background-color: rgba(255,255,255,0.2); color: white;">
                         <i class="fas fa-search mr-2"></i> Explorer les annonces
                     </a>
                 </div>

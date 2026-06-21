@@ -52,7 +52,7 @@
             </div>
         </div>
         
-        <a href="{{ route('transporteurs.show', $transporteur->id) }}" 
+        <a href="#" 
            class="flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-[10px] font-medium transition-all duration-300 text-white"
            style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));"
            onmouseover="this.style.background='linear-gradient(135deg, var(--color-primary-dark), var(--color-secondary))'; this.style.transform='translateY(-1px)'"
