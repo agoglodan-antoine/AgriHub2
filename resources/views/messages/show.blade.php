@@ -409,60 +409,65 @@
     let audioChunks = [];
     let audioTimer = null;
     let audioStartTime = null;
-    let isAudioRecorded = false;
     const AUDIO_MAX_DURATION = 30;
     let videoRecorder = null;
     let videoStream = null;
     let videoChunks = [];
     let videoTimer = null;
     let videoStartTime = null;
-    let isVideoRecorded = false;
     const VIDEO_MAX_DURATION = 60;
     let editingMessageId = null;
+    let isSending = false;
 
     // ============================================
-    // ENVOI DU MESSAGE VIA AJAX
+    // ENVOI DU MESSAGE VIA AJAX - CORRIGÉ
     // ============================================
     function sendMessage() {
+        if (isSending) {
+            showNotification('Envoi en cours, veuillez patienter...', 'warning');
+            return;
+        }
+        
         const submitBtn = document.getElementById('submit-btn');
         const messageInput = document.getElementById('message-input');
         
         if (isAudioRecording) {
-            alert('Veuillez arrêter l\'enregistrement audio avant d\'envoyer.');
+            showNotification('Veuillez arrêter l\'enregistrement audio avant d\'envoyer.', 'warning');
             return;
         }
         if (isVideoRecording) {
-            alert('Veuillez arrêter l\'enregistrement vidéo avant d\'envoyer.');
+            showNotification('Veuillez arrêter l\'enregistrement vidéo avant d\'envoyer.', 'warning');
             return;
         }
         
         const hasContent = messageInput.value.trim().length > 0;
         const hasAudio = document.getElementById('audio_data').value.length > 0;
         const hasVideo = document.getElementById('video_data').value.length > 0;
-        let hasFiles = selectedFiles.length > 0;
         const fileInput = document.getElementById('file-input');
-        if (!hasFiles && fileInput.files.length > 0) {
-            for (let i = 0; i < fileInput.files.length; i++) {
-                if (fileInput.files[i].size > 0) {
-                    hasFiles = true;
-                    break;
-                }
-            }
-        }
+        const hasFiles = fileInput.files.length > 0;
         
         if (!hasContent && !hasAudio && !hasVideo && !hasFiles) {
-            showError('Veuillez saisir un message, joindre un fichier, ou enregistrer un audio/vidéo.');
+            showNotification('Veuillez saisir un message, joindre un fichier, ou enregistrer un audio/vidéo.', 'warning');
             return;
         }
         
-        if (selectedFiles.length === 0 && fileInput.files.length > 0) {
-            const files = Array.from(fileInput.files);
-            const validFiles = files.filter(f => f.size > 0);
-            if (validFiles.length > 0) {
-                selectedFiles = validFiles;
-                updateFilePreview();
+        // Vérifier la taille totale des fichiers
+        if (hasFiles) {
+            let totalSize = 0;
+            let maxTotalSize = 25 * 1024 * 1024; // 25MB
+            for (let i = 0; i < fileInput.files.length; i++) {
+                totalSize += fileInput.files[i].size;
+            }
+            if (totalSize > maxTotalSize) {
+                showNotification('La taille totale des fichiers ne doit pas dépasser 25MB.', 'error');
+                return;
             }
         }
+        
+        isSending = true;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
+        hideError();
         
         const formData = new FormData();
         
@@ -488,23 +493,14 @@
             formData.append('contenu', messageInput.value.trim());
         }
         
-        if (selectedFiles.length > 0) {
-            for (let i = 0; i < selectedFiles.length; i++) {
-                if (selectedFiles[i].size > 0) {
-                    formData.append('pieces_jointes[]', selectedFiles[i]);
-                }
-            }
-        } else if (fileInput.files.length > 0) {
+        // Ajouter les fichiers directement depuis l'input
+        if (hasFiles) {
             for (let i = 0; i < fileInput.files.length; i++) {
                 if (fileInput.files[i].size > 0) {
                     formData.append('pieces_jointes[]', fileInput.files[i]);
                 }
             }
         }
-        
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
-        hideError();
         
         fetch('{{ route("messagerie.send") }}', {
             method: 'POST',
@@ -522,6 +518,7 @@
             return response.json();
         })
         .then(data => {
+            isSending = false;
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
             
@@ -530,109 +527,123 @@
                 container.insertAdjacentHTML('beforeend', data.html);
                 container.scrollTop = container.scrollHeight;
                 
+                // Réinitialiser le champ de message
                 messageInput.value = '';
                 messageInput.style.height = 'auto';
-                selectedFiles = [];
-                updateFilePreview();
+                
+                // Réinitialiser les fichiers
                 document.getElementById('file-input').value = '';
+                selectedFiles = [];
+                const previewContainer = document.getElementById('file-preview-container');
+                previewContainer.style.display = 'none';
+                previewContainer.innerHTML = '';
+                
+                // Réinitialiser l'audio et la vidéo
                 document.getElementById('audio_data').value = '';
                 document.getElementById('video_data').value = '';
                 document.getElementById('audio-record-btn').innerHTML = '<i class="fas fa-microphone text-sm"></i>';
                 document.getElementById('audio-record-btn').style.color = 'var(--color-primary)';
                 document.getElementById('video-record-btn').innerHTML = '<i class="fas fa-video text-sm"></i>';
                 document.getElementById('video-record-btn').style.color = 'var(--color-primary)';
+                
                 cancelReply();
                 
                 const emptyMessage = container.querySelector('#empty-message');
                 if (emptyMessage) emptyMessage.remove();
                 
                 // Réinitialiser le menu contextuel pour les nouveaux messages
-                setTimeout(initContextMenu, 100);
+                setTimeout(initContextMenu, 200);
                 
                 showNotification('Message envoyé avec succès !');
             } else {
                 if (data.errors) {
                     let errors = Object.values(data.errors).flat().join('\n');
-                    showError(errors);
+                    showNotification(errors, 'error');
                 } else {
-                    showError(data.message || 'Erreur lors de l\'envoi du message.');
+                    showNotification(data.message || 'Erreur lors de l\'envoi du message.', 'error');
                 }
             }
         })
         .catch(error => {
+            isSending = false;
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
             console.error('Erreur:', error);
-            showError('Erreur: ' + error.message);
+            showNotification('Erreur: ' + error.message, 'error');
         });
     }
 
     // ============================================
-    // GESTION DES FICHIERS
+    // GESTION DES FICHIERS - SIMPLIFIÉE
     // ============================================
     function handleFiles(input) {
         const files = Array.from(input.files);
+        const maxFiles = 5;
+        const maxFileSize = 10 * 1024 * 1024; // 10MB par fichier
+        const maxTotalSize = 25 * 1024 * 1024; // 25MB total
         
-        if (selectedFiles.length + files.length > 5) {
-            alert('Vous ne pouvez joindre que 5 fichiers maximum.');
+        // Vérifier le nombre de fichiers
+        if (files.length > maxFiles) {
+            showNotification(`Vous ne pouvez joindre que ${maxFiles} fichiers maximum.`, 'error');
             input.value = '';
             return;
         }
         
+        // Extensions autorisées
+        const allowedExtensions = [
+            'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico',
+            'mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', '3gp', 'm4v', 'mpeg',
+            'mp3', 'wav', 'ogg', 'aac', 'flac', 'opus',
+            'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'zip', 'rar', '7z'
+        ];
+        
+        let totalSize = 0;
         for (const file of files) {
             const extension = file.name.split('.').pop().toLowerCase();
-            const size = file.size;
             
-            if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(extension)) {
-                if (size > 5 * 1024 * 1024) {
-                    alert(`L'image "${file.name}" dépasse la limite de 5MB.`);
-                    input.value = '';
-                    return;
-                }
-            } else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', '3gp', 'm4v', 'mpeg'].includes(extension)) {
-                if (size > 10 * 1024 * 1024) {
-                    alert(`La vidéo "${file.name}" dépasse la limite de 10MB.`);
-                    input.value = '';
-                    return;
-                }
-            } else if (['mp3', 'wav', 'ogg', 'aac', 'flac', 'opus'].includes(extension)) {
-                if (size > 10 * 1024 * 1024) {
-                    alert(`L'audio "${file.name}" dépasse la limite de 10MB.`);
-                    input.value = '';
-                    return;
-                }
-            } else {
-                if (size > 5 * 1024 * 1024) {
-                    alert(`Le fichier "${file.name}" dépasse la limite de 5MB.`);
-                    input.value = '';
-                    return;
-                }
+            // Vérifier l'extension
+            if (!allowedExtensions.includes(extension)) {
+                showNotification(`Le fichier "${file.name}" n'est pas autorisé.`, 'error');
+                input.value = '';
+                return;
             }
+            
+            // Vérifier la taille par fichier
+            if (file.size > maxFileSize) {
+                showNotification(`Le fichier "${file.name}" dépasse la limite de 10MB.`, 'error');
+                input.value = '';
+                return;
+            }
+            
+            totalSize += file.size;
         }
         
-        selectedFiles = [...selectedFiles, ...files];
-        updateFileInput();
-        updateFilePreview();
-        input.value = '';
-    }
-
-    function updateFileInput() {
-        const input = document.getElementById('file-input');
-        const dataTransfer = new DataTransfer();
-        selectedFiles.forEach(file => dataTransfer.items.add(file));
-        input.files = dataTransfer.files;
-    }
-
-    function updateFilePreview() {
-        const container = document.getElementById('file-preview-container');
-        if (selectedFiles.length === 0) {
-            container.style.display = 'none';
-            container.innerHTML = '';
+        // Vérifier la taille totale
+        if (totalSize > maxTotalSize) {
+            showNotification(`La taille totale des fichiers (${(totalSize / 1024 / 1024).toFixed(2)}MB) dépasse la limite de 25MB.`, 'error');
+            input.value = '';
             return;
         }
         
+        // Mettre à jour la prévisualisation
+        updateFilePreview(files);
+    }
+
+    function updateFilePreview(files) {
+        const container = document.getElementById('file-preview-container');
+        if (!files || files.length === 0) {
+            const input = document.getElementById('file-input');
+            if (input && input.files.length > 0) {
+                files = Array.from(input.files);
+            } else {
+                container.style.display = 'none';
+                container.innerHTML = '';
+                return;
+            }
+        }
+        
         container.style.display = 'flex';
-        container.innerHTML = selectedFiles.map((file, index) => {
+        container.innerHTML = Array.from(files).map((file, index) => {
             const icon = file.type.startsWith('image/') ? 'image' : 
                         file.type.startsWith('video/') ? 'video' : 
                         file.type.startsWith('audio/') ? 'music' : 'file';
@@ -651,9 +662,20 @@
     }
 
     function removeFile(index) {
-        selectedFiles.splice(index, 1);
-        updateFileInput();
-        updateFilePreview();
+        const input = document.getElementById('file-input');
+        const dataTransfer = new DataTransfer();
+        const files = Array.from(input.files);
+        
+        files.splice(index, 1);
+        files.forEach(file => dataTransfer.items.add(file));
+        input.files = dataTransfer.files;
+        
+        if (input.files.length === 0) {
+            document.getElementById('file-preview-container').style.display = 'none';
+            document.getElementById('file-preview-container').innerHTML = '';
+        } else {
+            updateFilePreview(input.files);
+        }
     }
 
     // ============================================
@@ -696,31 +718,30 @@
     }
 
     // ============================================
-    // MENU CONTEXTUEL (Appui long et clic droit)
+    // MENU CONTEXTUEL - CORRIGÉ
     // ============================================
     let contextMenuTarget = null;
     let longPressTimer = null;
     let isLongPress = false;
-    let isContextMenuOpen = false;
 
     function initContextMenu() {
         const messageItems = document.querySelectorAll('.message-item');
         
         messageItems.forEach(item => {
             // Supprimer les anciens événements
+            item.removeEventListener('contextmenu', handleContextMenu);
             item.removeEventListener('mousedown', handleMouseDown);
             item.removeEventListener('mouseup', handleMouseUp);
             item.removeEventListener('mouseleave', handleMouseLeave);
-            item.removeEventListener('contextmenu', handleContextMenu);
             item.removeEventListener('touchstart', handleTouchStart);
             item.removeEventListener('touchend', handleTouchEnd);
             item.removeEventListener('touchmove', handleTouchMove);
             
             // Ajouter les nouveaux événements
+            item.addEventListener('contextmenu', handleContextMenu);
             item.addEventListener('mousedown', handleMouseDown);
             item.addEventListener('mouseup', handleMouseUp);
             item.addEventListener('mouseleave', handleMouseLeave);
-            item.addEventListener('contextmenu', handleContextMenu);
             item.addEventListener('touchstart', handleTouchStart);
             item.addEventListener('touchend', handleTouchEnd);
             item.addEventListener('touchmove', handleTouchMove);
@@ -739,17 +760,16 @@
             clearTimeout(longPressTimer);
             longPressTimer = setTimeout(() => {
                 isLongPress = true;
-                isContextMenuOpen = true;
                 showContextMenu(e.clientX, e.clientY, this);
             }, 600);
         }
     }
 
-    function handleMouseUp(e) {
+    function handleMouseUp() {
         clearTimeout(longPressTimer);
     }
 
-    function handleMouseLeave(e) {
+    function handleMouseLeave() {
         clearTimeout(longPressTimer);
     }
 
@@ -760,7 +780,6 @@
         clearTimeout(longPressTimer);
         longPressTimer = setTimeout(() => {
             isLongPress = true;
-            isContextMenuOpen = true;
             showContextMenu(touch.clientX, touch.clientY, this);
             document.body.style.overflow = 'hidden';
         }, 600);
@@ -775,7 +794,7 @@
         }
     }
 
-    function handleTouchMove(e) {
+    function handleTouchMove() {
         clearTimeout(longPressTimer);
         document.body.style.overflow = '';
     }
@@ -810,10 +829,8 @@
         menu.style.left = left + 'px';
         menu.style.top = top + 'px';
         menu.classList.remove('hidden');
-        isContextMenuOpen = true;
         
         element.classList.add('context-active');
-        
         clearTimeout(menu._hideTimer);
     }
 
@@ -822,8 +839,6 @@
         if (menu) {
             menu.classList.add('hidden');
         }
-        isContextMenuOpen = false;
-        
         document.querySelectorAll('.message-item.context-active').forEach(el => {
             el.classList.remove('context-active');
         });
@@ -836,16 +851,6 @@
             if (!menu.contains(e.target) && !e.target.closest('.message-item')) {
                 hideContextMenu();
             }
-        }
-    });
-
-    // Empêcher la propagation du clic sur le menu contextuel
-    document.addEventListener('DOMContentLoaded', function() {
-        const menu = document.getElementById('contextMenu');
-        if (menu) {
-            menu.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
         }
     });
 
@@ -1014,7 +1019,7 @@
 
     function initierCommande(annonceId, destinataireId) {
         if (!destinataireId) {
-            alert('Destinataire non spécifié.');
+            showNotification('Destinataire non spécifié.', 'error');
             return;
         }
         
@@ -1041,7 +1046,7 @@
                 const container = document.getElementById('messages-container');
                 container.insertAdjacentHTML('beforeend', data.html);
                 container.scrollTop = container.scrollHeight;
-                setTimeout(initContextMenu, 100);
+                setTimeout(initContextMenu, 200);
             } else {
                 showNotification(data.message || 'Erreur lors de l\'envoi.', 'error');
             }
@@ -1450,29 +1455,7 @@
     }
 
     // ============================================
-    // FONCTIONS DU MODAL DE CONTACT
-    // ============================================
-    function openContactModal(annonceId) {
-        document.getElementById('annonceId').value = annonceId;
-        document.getElementById('contactModal').classList.remove('hidden');
-        document.getElementById('contactModal').classList.add('flex');
-        setTimeout(() => {
-            document.getElementById('modalContent').classList.remove('scale-95');
-            document.getElementById('modalContent').classList.add('scale-100');
-        }, 50);
-    }
-    
-    function closeContactModal() {
-        document.getElementById('modalContent').classList.remove('scale-100');
-        document.getElementById('modalContent').classList.add('scale-95');
-        setTimeout(() => {
-            document.getElementById('contactModal').classList.add('hidden');
-            document.getElementById('contactModal').classList.remove('flex');
-        }, 300);
-    }
-
-    // ============================================
-    // ENREGISTREMENT AUDIO
+    // ENREGISTREMENT AUDIO - CORRIGÉ
     // ============================================
     document.addEventListener('DOMContentLoaded', function() {
         const audioBtn = document.getElementById('audio-record-btn');
@@ -1482,7 +1465,6 @@
                     toggleAudioRecording();
                     return;
                 }
-                isAudioRecorded = false;
                 document.getElementById('audio_data').value = '';
                 document.getElementById('audio-record-btn').innerHTML = '<i class="fas fa-microphone text-sm"></i>';
                 document.getElementById('audio-record-btn').style.color = 'var(--color-primary)';
@@ -1496,89 +1478,96 @@
         }
     });
 
-    async function initAudioRecorder() {
+    function initAudioRecorder() {
         try {
             if (audioStream) {
                 audioStream.getTracks().forEach(track => track.stop());
                 audioStream = null;
             }
             
-            audioStream = await navigator.mediaDevices.getUserMedia({ 
+            navigator.mediaDevices.getUserMedia({ 
                 audio: { channelCount: 1, sampleRate: 48000, echoCancellation: true, noiseSuppression: true } 
-            });
-            
-            audioChunks = [];
-            audioRecorder = new MediaRecorder(audioStream, {
-                mimeType: 'audio/webm;codecs=opus',
-                audioBitsPerSecond: 48000
-            });
-
-            audioRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) audioChunks.push(e.data);
-            };
-
-            audioRecorder.onstop = () => {
-                if (audioChunks.length === 0) {
-                    closeAudioRecorder();
-                    return;
-                }
+            })
+            .then(stream => {
+                audioStream = stream;
+                audioChunks = [];
                 
-                const blob = new Blob(audioChunks, { type: 'audio/opus' });
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const base64Data = reader.result;
-                    if (base64Data) {
-                        document.getElementById('audio_data').value = base64Data;
-                        isAudioRecorded = true;
-                        document.getElementById('audio-record-btn').innerHTML = '<i class="fas fa-check text-sm" style="color: #10B981;"></i>';
-                        document.getElementById('audio-record-btn').title = 'Audio enregistré';
-                        document.getElementById('audio-record-btn').style.color = '#10B981';
-                        showNotification('Audio enregistré avec succès !');
-                    } else {
-                        showNotification('Erreur lors de l\'enregistrement audio', 'error');
-                    }
-                    closeAudioRecorder();
+                audioRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm;codecs=opus',
+                    audioBitsPerSecond: 48000
+                });
+
+                audioRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) audioChunks.push(e.data);
                 };
-                reader.readAsDataURL(blob);
-                
-                if (audioStream) {
-                    audioStream.getTracks().forEach(track => track.stop());
-                    audioStream = null;
-                }
-                isAudioRecording = false;
-                clearInterval(audioTimer);
+
+                audioRecorder.onstop = () => {
+                    if (audioChunks.length === 0) {
+                        closeAudioRecorder();
+                        return;
+                    }
+                    
+                    const blob = new Blob(audioChunks, { type: 'audio/opus' });
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const base64Data = reader.result;
+                        if (base64Data) {
+                            document.getElementById('audio_data').value = base64Data;
+                            document.getElementById('audio-record-btn').innerHTML = '<i class="fas fa-check text-sm" style="color: #10B981;"></i>';
+                            document.getElementById('audio-record-btn').title = 'Audio enregistré';
+                            document.getElementById('audio-record-btn').style.color = '#10B981';
+                            showNotification('Audio enregistré avec succès !');
+                        } else {
+                            showNotification('Erreur lors de l\'enregistrement audio', 'error');
+                        }
+                        closeAudioRecorder();
+                    };
+                    reader.readAsDataURL(blob);
+                    
+                    if (audioStream) {
+                        audioStream.getTracks().forEach(track => track.stop());
+                        audioStream = null;
+                    }
+                    isAudioRecording = false;
+                    clearInterval(audioTimer);
+                    const startBtn = document.getElementById('audioStartStop');
+                    if (startBtn) {
+                        startBtn.innerHTML = '<i class="fas fa-microphone text-2xl"></i>';
+                    }
+                    const progress = document.getElementById('audioProgress');
+                    if (progress) {
+                        progress.style.width = '0%';
+                    }
+                    const timeCurrent = document.getElementById('audioTimeCurrent');
+                    if (timeCurrent) {
+                        timeCurrent.textContent = '00:00';
+                    }
+                };
+
+                audioRecorder.onstart = () => {
+                    audioStartTime = Date.now();
+                    audioTimer = setInterval(updateAudioTimer, 100);
+                    isAudioRecording = true;
+                    const startBtn = document.getElementById('audioStartStop');
+                    if (startBtn) {
+                        startBtn.innerHTML = '<i class="fas fa-stop text-2xl"></i>';
+                    }
+                };
+
                 const startBtn = document.getElementById('audioStartStop');
                 if (startBtn) {
-                    startBtn.innerHTML = '<i class="fas fa-microphone text-2xl"></i>';
+                    startBtn.onclick = toggleAudioRecording;
                 }
-                const progress = document.getElementById('audioProgress');
-                if (progress) {
-                    progress.style.width = '0%';
-                }
-                const timeCurrent = document.getElementById('audioTimeCurrent');
-                if (timeCurrent) {
-                    timeCurrent.textContent = '00:00';
-                }
-            };
-
-            audioRecorder.onstart = () => {
-                audioStartTime = Date.now();
-                audioTimer = setInterval(updateAudioTimer, 100);
-                isAudioRecording = true;
-                const startBtn = document.getElementById('audioStartStop');
-                if (startBtn) {
-                    startBtn.innerHTML = '<i class="fas fa-stop text-2xl"></i>';
-                }
-            };
-
-            const startBtn = document.getElementById('audioStartStop');
-            if (startBtn) {
-                startBtn.onclick = toggleAudioRecording;
-            }
+            })
+            .catch(error => {
+                console.error('Erreur audio:', error);
+                showNotification('Impossible d\'accéder au microphone: ' + error.message, 'error');
+                closeAudioRecorder();
+            });
 
         } catch (error) {
             console.error('Erreur audio:', error);
-            alert('Impossible d\'accéder au microphone: ' + error.message);
+            showNotification('Erreur: ' + error.message, 'error');
             closeAudioRecorder();
         }
     }
@@ -1615,7 +1604,7 @@
             if (audioRecorder && audioRecorder.state === 'recording') {
                 audioRecorder.stop();
             }
-            showNotification('Durée maximale d\'enregistrement atteinte (30s)');
+            showNotification('Durée maximale d\'enregistrement atteinte (30s)', 'warning');
         }
     }
 
@@ -1630,10 +1619,16 @@
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
+        if (audioStream) {
+            audioStream.getTracks().forEach(track => track.stop());
+            audioStream = null;
+        }
+        isAudioRecording = false;
+        clearInterval(audioTimer);
     }
 
     // ============================================
-    // ENREGISTREMENT VIDÉO
+    // ENREGISTREMENT VIDÉO - CORRIGÉ
     // ============================================
     document.addEventListener('DOMContentLoaded', function() {
         const videoBtn = document.getElementById('video-record-btn');
@@ -1643,7 +1638,6 @@
                     toggleVideoRecording();
                     return;
                 }
-                isVideoRecorded = false;
                 document.getElementById('video_data').value = '';
                 document.getElementById('video-record-btn').innerHTML = '<i class="fas fa-video text-sm"></i>';
                 document.getElementById('video-record-btn').style.color = 'var(--color-primary)';
@@ -1658,14 +1652,14 @@
         }
     });
 
-    async function initVideoRecorder() {
+    function initVideoRecorder() {
         try {
             if (videoStream) {
                 videoStream.getTracks().forEach(track => track.stop());
                 videoStream = null;
             }
             
-            videoStream = await navigator.mediaDevices.getUserMedia({
+            navigator.mediaDevices.getUserMedia({
                 video: {
                     width: { ideal: 640 },
                     height: { ideal: 480 },
@@ -1675,105 +1669,112 @@
                     echoCancellation: true,
                     noiseSuppression: true
                 }
-            });
-            
-            const preview = document.getElementById('videoPreview');
-            if (preview) {
-                preview.srcObject = videoStream;
-                await preview.play();
-            }
-            
-            videoChunks = [];
-            videoRecorder = new MediaRecorder(videoStream, {
-                mimeType: 'video/webm;codecs=vp9,opus',
-                videoBitsPerSecond: 1000000,
-                audioBitsPerSecond: 64000
-            });
-
-            videoRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) {
-                    videoChunks.push(e.data);
-                }
-            };
-
-            videoRecorder.onstop = () => {
-                if (videoChunks.length === 0) {
-                    closeVideoRecorder();
-                    return;
-                }
-                
-                const blob = new Blob(videoChunks, { type: 'video/webm' });
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const base64Data = reader.result;
-                    if (base64Data && base64Data.startsWith('data:video/webm;base64,')) {
-                        document.getElementById('video_data').value = base64Data;
-                        isVideoRecorded = true;
-                        const btn = document.getElementById('video-record-btn');
-                        if (btn) {
-                            btn.innerHTML = '<i class="fas fa-check text-sm" style="color: #10B981;"></i>';
-                            btn.title = 'Vidéo enregistrée';
-                            btn.style.color = '#10B981';
-                        }
-                        showNotification('Vidéo enregistrée avec succès !');
-                    } else {
-                        showNotification('Erreur lors de l\'enregistrement vidéo', 'error');
-                    }
-                    closeVideoRecorder();
-                };
-                reader.readAsDataURL(blob);
-                
-                if (videoStream) {
-                    videoStream.getTracks().forEach(track => track.stop());
-                    videoStream = null;
-                }
-                isVideoRecording = false;
-                clearInterval(videoTimer);
-                const startBtn = document.getElementById('videoStartStop');
-                if (startBtn) {
-                    startBtn.innerHTML = '<i class="fas fa-video text-2xl"></i>';
-                }
-                const overlay = document.getElementById('videoRecordingOverlay');
-                if (overlay) {
-                    overlay.classList.add('hidden');
-                }
-                const progress = document.getElementById('videoProgress');
-                if (progress) {
-                    progress.style.width = '0%';
-                }
-                const timeCurrent = document.getElementById('videoTimeCurrent');
-                if (timeCurrent) {
-                    timeCurrent.textContent = '00:00';
-                }
+            })
+            .then(stream => {
+                videoStream = stream;
                 
                 const preview = document.getElementById('videoPreview');
                 if (preview) {
-                    preview.srcObject = null;
+                    preview.srcObject = stream;
+                    preview.play().catch(e => console.warn('Preview play error:', e));
                 }
-            };
+                
+                videoChunks = [];
+                videoRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm;codecs=vp9,opus',
+                    videoBitsPerSecond: 1000000,
+                    audioBitsPerSecond: 64000
+                });
 
-            videoRecorder.onstart = () => {
-                videoStartTime = Date.now();
-                videoTimer = setInterval(updateVideoTimer, 100);
-                isVideoRecording = true;
+                videoRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) {
+                        videoChunks.push(e.data);
+                    }
+                };
+
+                videoRecorder.onstop = () => {
+                    if (videoChunks.length === 0) {
+                        closeVideoRecorder();
+                        return;
+                    }
+                    
+                    const blob = new Blob(videoChunks, { type: 'video/webm' });
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const base64Data = reader.result;
+                        if (base64Data && base64Data.startsWith('data:video/webm;base64,')) {
+                            document.getElementById('video_data').value = base64Data;
+                            const btn = document.getElementById('video-record-btn');
+                            if (btn) {
+                                btn.innerHTML = '<i class="fas fa-check text-sm" style="color: #10B981;"></i>';
+                                btn.title = 'Vidéo enregistrée';
+                                btn.style.color = '#10B981';
+                            }
+                            showNotification('Vidéo enregistrée avec succès !');
+                        } else {
+                            showNotification('Erreur lors de l\'enregistrement vidéo', 'error');
+                        }
+                        closeVideoRecorder();
+                    };
+                    reader.readAsDataURL(blob);
+                    
+                    if (videoStream) {
+                        videoStream.getTracks().forEach(track => track.stop());
+                        videoStream = null;
+                    }
+                    isVideoRecording = false;
+                    clearInterval(videoTimer);
+                    const startBtn = document.getElementById('videoStartStop');
+                    if (startBtn) {
+                        startBtn.innerHTML = '<i class="fas fa-video text-2xl"></i>';
+                    }
+                    const overlay = document.getElementById('videoRecordingOverlay');
+                    if (overlay) {
+                        overlay.classList.add('hidden');
+                    }
+                    const progress = document.getElementById('videoProgress');
+                    if (progress) {
+                        progress.style.width = '0%';
+                    }
+                    const timeCurrent = document.getElementById('videoTimeCurrent');
+                    if (timeCurrent) {
+                        timeCurrent.textContent = '00:00';
+                    }
+                    
+                    const preview = document.getElementById('videoPreview');
+                    if (preview) {
+                        preview.srcObject = null;
+                    }
+                };
+
+                videoRecorder.onstart = () => {
+                    videoStartTime = Date.now();
+                    videoTimer = setInterval(updateVideoTimer, 100);
+                    isVideoRecording = true;
+                    const startBtn = document.getElementById('videoStartStop');
+                    if (startBtn) {
+                        startBtn.innerHTML = '<i class="fas fa-stop text-2xl"></i>';
+                    }
+                    const overlay = document.getElementById('videoRecordingOverlay');
+                    if (overlay) {
+                        overlay.classList.remove('hidden');
+                    }
+                };
+
                 const startBtn = document.getElementById('videoStartStop');
                 if (startBtn) {
-                    startBtn.innerHTML = '<i class="fas fa-stop text-2xl"></i>';
+                    startBtn.onclick = toggleVideoRecording;
                 }
-                const overlay = document.getElementById('videoRecordingOverlay');
-                if (overlay) {
-                    overlay.classList.remove('hidden');
-                }
-            };
-
-            const startBtn = document.getElementById('videoStartStop');
-            if (startBtn) {
-                startBtn.onclick = toggleVideoRecording;
-            }
+            })
+            .catch(error => {
+                console.error('Erreur vidéo:', error);
+                showNotification('Impossible d\'accéder à la caméra: ' + error.message, 'error');
+                closeVideoRecorder();
+            });
 
         } catch (error) {
             console.error('Erreur vidéo:', error);
-            alert('Impossible d\'accéder à la caméra: ' + error.message);
+            showNotification('Erreur: ' + error.message, 'error');
             closeVideoRecorder();
         }
     }
@@ -1808,7 +1809,7 @@
             if (videoRecorder && videoRecorder.state === 'recording') {
                 videoRecorder.stop();
             }
-            showNotification('Durée maximale d\'enregistrement atteinte (60s)');
+            showNotification('Durée maximale d\'enregistrement atteinte (60s)', 'warning');
         }
     }
 
@@ -1828,6 +1829,12 @@
             preview.srcObject.getTracks().forEach(track => track.stop());
             preview.srcObject = null;
         }
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
+            videoStream = null;
+        }
+        isVideoRecording = false;
+        clearInterval(videoTimer);
     }
 
     // ============================================
@@ -1860,7 +1867,7 @@
     }
 
     // ============================================
-    // ERREURS & NOTIFICATIONS
+    // FONCTIONS DE NOTIFICATION UNIFIÉES
     // ============================================
     function showError(message) {
         const container = document.getElementById('form-errors');
@@ -1868,6 +1875,8 @@
         if (container && errorText) {
             errorText.textContent = message;
             container.classList.remove('hidden');
+        } else {
+            showNotification(message, 'error');
         }
     }
 
@@ -1882,19 +1891,22 @@
         const colors = {
             success: 'linear-gradient(135deg, #10B981, #059669)',
             error: 'linear-gradient(135deg, #EF4444, #DC2626)',
-            warning: 'linear-gradient(135deg, #F59E0B, #D97706)'
+            warning: 'linear-gradient(135deg, #F59E0B, #D97706)',
+            info: 'linear-gradient(135deg, #3B82F6, #2563EB)'
         };
         const icons = {
             success: 'fa-check-circle',
             error: 'fa-exclamation-circle',
-            warning: 'fa-exclamation-triangle'
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
         };
         
         const notification = document.createElement('div');
-        notification.className = 'fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg text-white z-[9999]';
+        notification.className = 'fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg text-white z-[9999] max-w-md';
         notification.style.background = colors[type] || colors.success;
         notification.style.zIndex = '9999';
         notification.style.animation = 'slideInRight 0.3s ease-out';
+        notification.style.wordBreak = 'break-word';
         notification.innerHTML = `<i class="fas ${icons[type] || icons.success} mr-2"></i>${message}`;
         document.body.appendChild(notification);
         
@@ -1902,11 +1914,11 @@
             notification.style.opacity = '0';
             notification.style.transition = 'opacity 0.5s';
             setTimeout(() => notification.remove(), 500);
-        }, 3000);
+        }, 4000);
     }
 
     // ============================================
-    // INITIALISATION AVEC MUTATION OBSERVER
+    // INITIALISATION
     // ============================================
     document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById('messages-container');
@@ -1915,33 +1927,31 @@
         }
         
         // Initialiser le menu contextuel
-        initContextMenu();
+        setTimeout(initContextMenu, 100);
         
-        // ============================================
-        // MUTATION OBSERVER - Détecter les nouveaux messages
-        // ============================================
+        // MutationObserver pour les nouveaux messages
         const messagesContainer = document.getElementById('messages-container');
         if (messagesContainer) {
             const observer = new MutationObserver(function(mutations) {
+                let hasNewMessages = false;
                 mutations.forEach(function(mutation) {
                     if (mutation.addedNodes.length > 0) {
-                        let hasNewMessages = false;
                         mutation.addedNodes.forEach(function(node) {
-                            if (node.nodeType === 1 && node.classList && node.classList.contains('message-item')) {
-                                hasNewMessages = true;
-                            }
-                            if (node.querySelectorAll) {
-                                if (node.querySelectorAll('.message-item').length > 0) {
+                            if (node.nodeType === 1) {
+                                if (node.classList && node.classList.contains('message-item')) {
+                                    hasNewMessages = true;
+                                }
+                                if (node.querySelectorAll && node.querySelectorAll('.message-item').length > 0) {
                                     hasNewMessages = true;
                                 }
                             }
                         });
-                        
-                        if (hasNewMessages) {
-                            setTimeout(initContextMenu, 100);
-                        }
                     }
                 });
+                
+                if (hasNewMessages) {
+                    setTimeout(initContextMenu, 200);
+                }
             });
             
             observer.observe(messagesContainer, {
@@ -1963,8 +1973,11 @@
             hideContextMenu();
             fermerFormulaireCommande();
             fermerAjustementModal();
-            closeContactModal();
+            if (typeof closeContactModal === 'function') {
+                closeContactModal();
+            }
         }
     });
+
     </script>
 </x-app-layout>

@@ -325,7 +325,7 @@
                         @if(!$message->est_demande_commande && !$message->est_demande_paiement)
                             <!-- Initier commande - UNIQUEMENT pour le VENDEUR -->
                             @if($estVendeur)
-                                <button onclick="initierCommande({{ $annonce->id }}, {{ $message->id_destinataire }})" 
+                                <button onclick="initierCommande({{ $annonce->id }}, {{ $message->id_expediteur }})" 
                                         class="px-4 py-2 rounded-lg text-sm font-semibold text-white transition hover:scale-105"
                                         style="background: linear-gradient(135deg, #FF9800, #F57C00);">
                                     <i class="fas fa-shopping-cart mr-1"></i> Initier commande

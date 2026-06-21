@@ -747,7 +747,7 @@ class MessageController extends Controller
     /**
      * Rendre un message en HTML pour AJAX
      */
-    private function renderMessage(Message $message): string
+    public function renderMessage(Message $message): string
     {
         $currentUserId = Auth::id();
         $isMine = $message->id_expediteur === $currentUserId;
@@ -1076,6 +1076,30 @@ class MessageController extends Controller
         }
                     
         $html .= '</div>';
+                    
+        return $html;
+    }
+
+    /**
+    * Rendre un message en HTML pour un utilisateur spécifique (utilisé par SSE)
+    */
+    public function renderMessageForUser(Message $message, int $userId): string
+    {
+        // Sauvegarder l'utilisateur actuel
+        $originalUser = Auth::user();
+                    
+        // Forcer l'authentification avec l'ID utilisateur
+        Auth::loginUsingId($userId);
+                    
+        // Rendre le message
+        $html = $this->renderMessage($message);
+                    
+        // Restaurer l'utilisateur original
+        if ($originalUser) {
+            Auth::login($originalUser);
+        } else {
+            Auth::logout();
+        }
                     
         return $html;
     }

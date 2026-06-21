@@ -11,11 +11,11 @@ use App\Http\Controllers\TransporteurController;
 use App\Http\Controllers\RecompenseController;
 use App\Http\Controllers\FAQController;
 use App\Http\Controllers\ContactController;
-use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\PaiementController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\AnnonceAdminController;
-use App\Http\Controllers\Admin\TransactionAdminController;
+use App\Http\Controllers\Admin\PaiementAdminController;
 use App\Http\Controllers\Admin\ParametreController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\DashboardController as UserDashboardController;
@@ -141,8 +141,9 @@ Route::middleware(['auth'])->group(function () {
     // Mes annonces (tous types)
     Route::get('/mes-annonces', [AnnonceController::class, 'mesAnnonces'])->name('mes-annonces');
     
-    // Mes transactions
-    Route::get('/mes-transactions', [TransactionController::class, 'mesTransactions'])->name('mes-transactions');
+    // Mes commandes et paiements
+    Route::get('/mes-commandes', [PaiementController::class, 'mesCommandes'])->name('mes-commandes');
+    Route::get('/mes-paiements', [PaiementController::class, 'mesPaiements'])->name('mes-paiements');
     
     // Points de fidélité
     Route::get('/mes-points', [RecompenseController::class, 'mesPoints'])->name('mes-points');
@@ -183,6 +184,13 @@ Route::middleware(['auth'])->prefix('messagerie')->name('messagerie.')->group(fu
 });
 
 // ============================================
+// ROUTES SSE (Server-Sent Events)
+// ============================================
+Route::middleware(['auth'])->prefix('sse')->name('sse.')->group(function () {
+    Route::get('/messages', [App\Http\Controllers\SseController::class, 'streamMessages'])->name('messages');
+});
+
+// ============================================
 // GROUPE DES ROUTES POUR ÉLEVEURS
 // ============================================
 Route::middleware(['auth', 'role:eleveur'])->prefix('eleveur')->name('eleveur.')->group(function () {
@@ -209,7 +217,7 @@ Route::middleware(['auth', 'role:eleveur'])->prefix('eleveur')->name('eleveur.')
     Route::get('/mes-annonces/escrements', [EscrementAnnonceController::class, 'mesAnnonces'])->name('annonces.escrements.mes-annonces');
     
     // Mes ventes
-    Route::get('/mes-ventes', [TransactionController::class, 'mesVentes'])->name('mes-ventes');
+    Route::get('/mes-ventes', [PaiementController::class, 'mesVentes'])->name('mes-ventes');
     
     // Statistiques
     Route::get('/statistiques', [App\Http\Controllers\Eleveur\StatistiqueController::class, 'index'])->name('statistiques');
@@ -219,10 +227,10 @@ Route::middleware(['auth', 'role:eleveur'])->prefix('eleveur')->name('eleveur.')
     Route::get('/animaux/{id}', [App\Http\Controllers\Eleveur\AnimalController::class, 'show'])->name('animaux.show');
     
     // Gestion des commandes (en tant que vendeur)
-    Route::get('/commandes', [TransactionController::class, 'mesCommandesRecues'])->name('commandes');
-    Route::get('/commandes/{id}', [TransactionController::class, 'showCommande'])->name('commandes.show');
-    Route::put('/commandes/{id}/statut', [TransactionController::class, 'updateStatutCommande'])->name('commandes.update-statut');
-    Route::post('/commandes/{id}/ajuster', [TransactionController::class, 'ajusterPaiement'])->name('commandes.ajuster');
+    Route::get('/commandes', [PaiementController::class, 'mesCommandesRecues'])->name('commandes');
+    Route::get('/commandes/{id}', [PaiementController::class, 'showCommande'])->name('commandes.show');
+    Route::put('/commandes/{id}/statut', [PaiementController::class, 'updateStatutCommande'])->name('commandes.update-statut');
+    Route::post('/commandes/{id}/ajuster', [PaiementController::class, 'ajusterPaiement'])->name('commandes.ajuster');
 });
 
 // ============================================
@@ -247,10 +255,10 @@ Route::middleware(['auth', 'role:vendeur_nourriture'])->prefix('vendeur-nourritu
     Route::get('/mes-produits', [AlimentAnnonceController::class, 'mesProduits'])->name('mes-produits');
     
     // Commandes reçues
-    Route::get('/commandes', [TransactionController::class, 'mesCommandesRecues'])->name('commandes');
-    Route::get('/commandes/{id}', [TransactionController::class, 'showCommande'])->name('commandes.show');
-    Route::put('/commandes/{id}/statut', [TransactionController::class, 'updateStatutCommande'])->name('commandes.update-statut');
-    Route::post('/commandes/{id}/ajuster', [TransactionController::class, 'ajusterPaiement'])->name('commandes.ajuster');
+    Route::get('/commandes', [PaiementController::class, 'mesCommandesRecues'])->name('commandes');
+    Route::get('/commandes/{id}', [PaiementController::class, 'showCommande'])->name('commandes.show');
+    Route::put('/commandes/{id}/statut', [PaiementController::class, 'updateStatutCommande'])->name('commandes.update-statut');
+    Route::post('/commandes/{id}/ajuster', [PaiementController::class, 'ajusterPaiement'])->name('commandes.ajuster');
     
     // Gestion du stock
     Route::get('/stock', [App\Http\Controllers\VendeurNourriture\StockController::class, 'index'])->name('stock');
@@ -279,10 +287,10 @@ Route::middleware(['auth', 'role:vendeur_accessoire'])->prefix('vendeur-accessoi
     Route::get('/mes-produits', [AccessoireAnnonceController::class, 'mesProduits'])->name('mes-produits');
     
     // Commandes reçues
-    Route::get('/commandes', [TransactionController::class, 'mesCommandesRecues'])->name('commandes');
-    Route::get('/commandes/{id}', [TransactionController::class, 'showCommande'])->name('commandes.show');
-    Route::put('/commandes/{id}/statut', [TransactionController::class, 'updateStatutCommande'])->name('commandes.update-statut');
-    Route::post('/commandes/{id}/ajuster', [TransactionController::class, 'ajusterPaiement'])->name('commandes.ajuster');
+    Route::get('/commandes', [PaiementController::class, 'mesCommandesRecues'])->name('commandes');
+    Route::get('/commandes/{id}', [PaiementController::class, 'showCommande'])->name('commandes.show');
+    Route::put('/commandes/{id}/statut', [PaiementController::class, 'updateStatutCommande'])->name('commandes.update-statut');
+    Route::post('/commandes/{id}/ajuster', [PaiementController::class, 'ajusterPaiement'])->name('commandes.ajuster');
 });
 
 // ============================================
@@ -296,10 +304,10 @@ Route::middleware(['auth', 'role:acheteur'])->prefix('acheteur')->name('acheteur
     })->name('dashboard');
     
     // Mes commandes
-    Route::get('/mes-commandes', [TransactionController::class, 'mesCommandes'])->name('mes-commandes');
-    Route::get('/commandes/{id}', [TransactionController::class, 'showCommande'])->name('commandes.show');
-    Route::get('/commandes/{id}/paiement', [TransactionController::class, 'pagePaiement'])->name('paiement');
-    Route::post('/commandes/{id}/paiement', [TransactionController::class, 'processPaiement'])->name('paiement.process');
+    Route::get('/mes-commandes', [PaiementController::class, 'mesCommandes'])->name('mes-commandes');
+    Route::get('/commandes/{id}', [PaiementController::class, 'showCommande'])->name('commandes.show');
+    Route::get('/commandes/{id}/paiement', [PaiementController::class, 'pagePaiement'])->name('paiement');
+    Route::post('/commandes/{id}/paiement', [PaiementController::class, 'processPaiement'])->name('paiement.process');
     
     // Favoris
     Route::get('/favoris', [App\Http\Controllers\Acheteur\FavoriController::class, 'index'])->name('favoris');
@@ -348,9 +356,9 @@ Route::middleware(['auth', 'role:transporteur'])->prefix('transporteur')->name('
     Route::put('/tarifs', [App\Http\Controllers\Transporteur\TarifController::class, 'update'])->name('tarifs.update');
     
     // Commandes de transport
-    Route::get('/commandes', [TransactionController::class, 'mesCommandesTransport'])->name('commandes');
-    Route::get('/commandes/{id}', [TransactionController::class, 'showCommande'])->name('commandes.show');
-    Route::put('/commandes/{id}/accepter', [TransactionController::class, 'accepterTransport'])->name('commandes.accepter');
+    Route::get('/commandes', [PaiementController::class, 'mesCommandesTransport'])->name('commandes');
+    Route::get('/commandes/{id}', [PaiementController::class, 'showCommande'])->name('commandes.show');
+    Route::put('/commandes/{id}/accepter', [PaiementController::class, 'accepterTransport'])->name('commandes.accepter');
 });
 
 // ============================================
@@ -367,8 +375,11 @@ Route::middleware(['auth', 'role:admin,super_admin'])->prefix('admin')->name('ad
     // Gestion des annonces
     Route::resource('annonces', AnnonceAdminController::class);
     
-    // Gestion des transactions
-    Route::resource('transactions', TransactionAdminController::class);
+    // Gestion des paiements et commandes
+    Route::resource('paiements', PaiementAdminController::class);
+    Route::get('commandes', [PaiementAdminController::class, 'commandes'])->name('commandes');
+    Route::get('commandes/{id}', [PaiementAdminController::class, 'showCommande'])->name('commandes.show');
+    Route::put('commandes/{id}/statut', [PaiementAdminController::class, 'updateStatutCommande'])->name('commandes.update-statut');
     
     // Gestion des paramètres
     Route::get('/parametres', [ParametreController::class, 'edit'])->name('parametres.edit');
@@ -420,15 +431,15 @@ Route::middleware(['auth', 'role:eleveur,veterinaire,transporteur'])->prefix('pr
 });
 
 // ============================================
-// ROUTES COMMANDES (API/AJAX)
+// ROUTES COMMANDES (API/AJAX) - Utilise PaiementController
 // ============================================
 Route::middleware(['auth'])->prefix('commandes')->name('commandes.')->group(function () {
     // Route pour récupérer les infos d'une commande (AJAX)
-    Route::get('/{id}/info', [TransactionController::class, 'getCommandeInfo'])->name('info');
+    Route::get('/{id}/info', [PaiementController::class, 'getCommandeInfo'])->name('info');
     // Route pour ajuster le paiement (AJAX)
-    Route::post('/{id}/ajuster', [TransactionController::class, 'ajusterPaiement'])->name('ajuster');
-    // Route pour afficher une commande (pour les fournisseurs)
-    Route::get('/{id}', [TransactionController::class, 'showCommande'])->name('show');
+    Route::post('/{id}/ajuster', [PaiementController::class, 'ajusterPaiement'])->name('ajuster');
+    // Route pour afficher une commande
+    Route::get('/{id}', [PaiementController::class, 'showCommande'])->name('show');
 });
 
 // ============================================
@@ -436,17 +447,15 @@ Route::middleware(['auth'])->prefix('commandes')->name('commandes.')->group(func
 // ============================================
 Route::middleware(['auth'])->prefix('paiement')->name('paiement.')->group(function () {
     // Page de paiement
-    Route::get('/{commandeId}', [TransactionController::class, 'pagePaiement'])->name('page');
+    Route::get('/{commandeId}', [PaiementController::class, 'pagePaiement'])->name('page');
     // Traitement du paiement
-    Route::post('/{commandeId}/process', [TransactionController::class, 'processPaiement'])->name('process');
+    Route::post('/{commandeId}/process', [PaiementController::class, 'processPaiement'])->name('process');
     // Page de succès
-    Route::get('/{commandeId}/succes', [TransactionController::class, 'paiementSucces'])->name('succes');
+    Route::get('/{commandeId}/succes', [PaiementController::class, 'paiementSucces'])->name('succes');
     // Page d'échec
-    Route::get('/{commandeId}/echec', [TransactionController::class, 'paiementEchec'])->name('echec');
-    // Initier un paiement depuis un message
-    Route::post('/initier', [TransactionController::class, 'initierPaiement'])->name('initier');
+    Route::get('/{commandeId}/echec', [PaiementController::class, 'paiementEchec'])->name('echec');
     // Vérifier le statut d'un paiement
-    Route::get('/{commandeId}/statut', [TransactionController::class, 'verifierStatut'])->name('statut');
+    Route::get('/{commandeId}/statut', [PaiementController::class, 'verifierStatut'])->name('statut');
 });
 
 // Inclusion des routes d'authentification

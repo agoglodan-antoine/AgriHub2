@@ -868,148 +868,60 @@ function closeContactModal() {
 }
 
 // ============================================
-// FONCTIONS DE NOTIFICATION
+// FONCTIONS DE NOTIFICATION - PARTAGÉES
 // ============================================
-
-function showNotification(message, type = 'success') {
-    const colors = {
-        success: 'linear-gradient(135deg, #10B981, #059669)',
-        error: 'linear-gradient(135deg, #EF4444, #DC2626)',
-        warning: 'linear-gradient(135deg, #F59E0B, #D97706)'
-    };
-    const icons = {
-        success: 'fa-check-circle',
-        error: 'fa-exclamation-circle',
-        warning: 'fa-exclamation-triangle'
-    };
-    
-    const notification = document.createElement('div');
-    notification.className = 'fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg text-white z-[9999]';
-    notification.style.background = colors[type] || colors.success;
-    notification.style.zIndex = '9999';
-    notification.style.animation = 'slideInRight 0.3s ease-out';
-    notification.innerHTML = `<i class="fas ${icons[type] || icons.success} mr-2"></i>${message}`;
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transition = 'opacity 0.5s';
-        setTimeout(() => notification.remove(), 500);
-    }, 3000);
+// La fonction showNotification est définie dans show.blade.php
+// On vérifie si elle n'existe pas avant de la définir
+if (typeof showNotification === 'undefined') {
+    function showNotification(message, type = 'success') {
+        const colors = {
+            success: 'linear-gradient(135deg, #10B981, #059669)',
+            error: 'linear-gradient(135deg, #EF4444, #DC2626)',
+            warning: 'linear-gradient(135deg, #F59E0B, #D97706)',
+            info: 'linear-gradient(135deg, #3B82F6, #2563EB)'
+        };
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+        };
+        
+        const notification = document.createElement('div');
+        notification.className = 'fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg text-white z-[9999] max-w-md';
+        notification.style.background = colors[type] || colors.success;
+        notification.style.zIndex = '9999';
+        notification.style.animation = 'slideInRight 0.3s ease-out';
+        notification.style.wordBreak = 'break-word';
+        notification.innerHTML = `<i class="fas ${icons[type] || icons.success} mr-2"></i>${message}`;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.5s';
+            setTimeout(() => notification.remove(), 500);
+        }, 4000);
+    }
 }
 
 // ============================================
-// FONCTIONS DE FERMETURE AVEC ÉCHAP
+// FERMETURE AVEC ÉCHAP
 // ============================================
-
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         fermerFormulaireCommande();
         fermerPaiementModal();
         fermerAjustementModal();
         closeContactModal();
-        closeImagePreview();
-        closeAudioRecorder();
-        closeVideoRecorder();
+        if (typeof closeImagePreview === 'function') {
+            closeImagePreview();
+        }
+        if (typeof closeAudioRecorder === 'function') {
+            closeAudioRecorder();
+        }
+        if (typeof closeVideoRecorder === 'function') {
+            closeVideoRecorder();
+        }
     }
 });
-
-// ============================================
-// FONCTIONS DE PRÉVISUALISATION D'IMAGE
-// ============================================
-
-function openImagePreview(src, title, downloadUrl) {
-    const previewImage = document.getElementById('previewImage');
-    const previewTitle = document.getElementById('previewTitle');
-    const previewDownloadLink = document.getElementById('previewDownloadLink');
-    const modal = document.getElementById('imagePreviewModal');
-    
-    if (previewImage) previewImage.src = src;
-    if (previewTitle) previewTitle.textContent = title || 'Aperçu';
-    if (previewDownloadLink) {
-        previewDownloadLink.href = downloadUrl || src;
-        previewDownloadLink.download = title || 'image';
-    }
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    }
-}
-
-function closeImagePreview() {
-    const modal = document.getElementById('imagePreviewModal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
-}
-
-// ============================================
-// FONCTIONS D'ENREGISTREMENT AUDIO
-// ============================================
-
-let audioRecorder = null;
-let audioStream = null;
-let audioChunks = [];
-let audioTimer = null;
-let audioStartTime = null;
-let isAudioRecording = false;
-const AUDIO_MAX_DURATION = 30;
-
-function initAudioRecorder() {
-    // Cette fonction est appelée depuis le fichier principal
-    // Elle est définie ici pour éviter les erreurs
-}
-
-function toggleAudioRecording() {
-    // Cette fonction est appelée depuis le fichier principal
-}
-
-function closeAudioRecorder() {
-    const modal = document.getElementById('audioRecorderModal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
-    if (audioStream) {
-        audioStream.getTracks().forEach(track => track.stop());
-        audioStream = null;
-    }
-    isAudioRecording = false;
-    clearInterval(audioTimer);
-}
-
-// ============================================
-// FONCTIONS D'ENREGISTREMENT VIDÉO
-// ============================================
-
-let videoRecorder = null;
-let videoStream = null;
-let videoChunks = [];
-let videoTimer = null;
-let videoStartTime = null;
-let isVideoRecording = false;
-const VIDEO_MAX_DURATION = 60;
-
-function initVideoRecorder() {
-    // Cette fonction est appelée depuis le fichier principal
-}
-
-function toggleVideoRecording() {
-    // Cette fonction est appelée depuis le fichier principal
-}
-
-function closeVideoRecorder() {
-    const modal = document.getElementById('videoRecorderModal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
-    if (videoStream) {
-        videoStream.getTracks().forEach(track => track.stop());
-        videoStream = null;
-    }
-    isVideoRecording = false;
-    clearInterval(videoTimer);
-}
 </script>
