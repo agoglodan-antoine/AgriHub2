@@ -4,7 +4,7 @@
     icon="paw"
     badge="🐾 Annonces"
     :items="$annoncesAnimaux"
-    route="{{ route('annonces.animaux.index') }}"
+    route="{{ route('annonce.animal.index') }}"
     routeText="Voir tous les animaux"
     type="annonce"
     bgColor="#f8f6f0"

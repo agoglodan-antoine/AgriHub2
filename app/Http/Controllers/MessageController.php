@@ -879,10 +879,10 @@ class MessageController extends Controller
         if ($message->id_annonce && $message->annonce) {
             $annonce = $message->annonce;
             $annonceRoute = match($annonce->type) {
-                'animal' => route('annonces.animaux.show', $annonce->id),
-                'nourriture' => route('annonces.aliments.show', $annonce->id),
-                'accessoire' => route('annonces.accessoires.show', $annonce->id),
-                'escrement' => route('annonces.escrements.show', $annonce->id),
+                'animal' => route('annonce.animal.show', $annonce->id),
+                'nourriture' => route('annonce.aliment.show', $annonce->id),
+                'accessoire' => route('annonce.accessoire.show', $annonce->id),
+                'escrement' => route('annonce.escrement.show', $annonce->id),
                 default => route('annonces.show', $annonce->id),
             };
                     

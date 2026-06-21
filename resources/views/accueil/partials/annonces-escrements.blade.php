@@ -4,7 +4,7 @@
     icon="leaf"
     badge="🌱 Fertilisants"
     :items="$annoncesEscrements"
-    route="{{ route('annonces.escrements.index') }}"
+    route="{{ route('annonce.escrement.index') }}"
     routeText="Voir tous les escrements"
     type="annonce"
     bgColor="#2d2d2d"

@@ -3,7 +3,7 @@
         <div class="bg-gradient-to-r from-primary to-primary-dark py-12">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center gap-4">
-                    <a href="{{ route('annonces.accessoires.index') }}" class="text-white hover:text-secondary-light transition">
+                    <a href="{{ route('annonce.accessoire.index') }}" class="text-white hover:text-secondary-light transition">
                         <i class="fas fa-arrow-left text-xl"></i>
                     </a>
                     <div>
@@ -197,13 +197,13 @@
                                 </div>
                                 <div class="p-4">
                                     <h4 class="font-bold mb-1 line-clamp-1">
-                                        <a href="{{ route('annonces.accessoires.show', $similaire->id) }}" 
+                                        <a href="{{ route('annonce.accessoire.show', $similaire->id) }}" 
                                            class="hover:text-primary transition"
                                            style="color: var(--color-nav-text);">
                                             {{ $similaire->titre }}
                                         </a>
                                     </h4>
-                                    <a href="{{ route('annonces.accessoires.show', $similaire->id) }}" 
+                                    <a href="{{ route('annonce.accessoire.show', $similaire->id) }}" 
                                        class="text-sm font-semibold transition inline-flex items-center"
                                        style="color: var(--color-primary);">
                                         Voir détails <i class="fas fa-arrow-right ml-1"></i>

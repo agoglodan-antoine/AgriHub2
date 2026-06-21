@@ -4,7 +4,7 @@
     icon="apple-alt"
     badge="🌾 Alimentation"
     :items="$annoncesNourriture"
-    route="{{ route('annonces.aliments.index') }}"
+    route="{{ route('annonce.aliment.index') }}"
     routeText="Voir tous les aliments"
     type="annonce"
     bgColor="#1a1a1a"

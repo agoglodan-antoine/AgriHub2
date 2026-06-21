@@ -20,7 +20,7 @@
                 
                 <!-- Champ de recherche -->
                 <div class="hidden md:block flex-1 max-w-xl mx-4">
-                    <form action="#" method="GET" class="relative">
+                    <form action="{{ route('global.search') }}" method="GET" class="relative">
                         <input type="text" name="search" 
                                placeholder="Rechercher des annonces..." 
                                class="w-full px-4 py-2 pl-10 pr-4 rounded-full border focus:outline-none focus:ring-2 transition-colors"
@@ -86,13 +86,13 @@
                                 <a href="{{ route('profile.edit') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-user w-5 mr-3" style="color: var(--color-primary);"></i> Mon profil
                                 </a>
-                                <a href="#" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
+                                <a href="{{ route('annonce.animal.mes-annonces') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-box w-5 mr-3" style="color: var(--color-primary);"></i> Mes annonces
                                 </a>
                                 <a href="#" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-exchange-alt w-5 mr-3" style="color: var(--color-primary);"></i> Mes transactions
                                 </a>
-                                <a href="#" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
+                                <a href="{{ route('recompenses.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors dropdown-link" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-gem w-5 mr-3" style="color: var(--color-primary);"></i> Mes points
                                 </a>
                                 
@@ -130,7 +130,7 @@
             
             <!-- Recherche mobile -->
             <div id="mobile-search" class="hidden md:hidden mt-3 pt-3" style="border-top: 1px solid var(--color-nav-border);">
-                <form action="#" method="GET" class="relative">
+                <form action="{{ route('global.search') }}" method="GET" class="relative">
                     <input type="text" name="search" placeholder="Rechercher..." 
                            class="w-full px-4 py-2 pl-10 pr-4 rounded-full border focus:outline-none focus:ring-2 transition-colors"
                            style="border-color: var(--color-nav-border); background-color: var(--color-bg-white); color: var(--color-nav-text);">
@@ -174,20 +174,21 @@
                         
                         <div class="absolute top-full left-0 w-64 rounded-lg opacity-0 invisible group-hover/dropdown:opacity-100 group-hover/dropdown:visible transition-all duration-200 z-50 shadow-lg" style="background-color: var(--color-bg-white); border: 1px solid var(--color-nav-border);">
                             <div class="py-2">
-                                <a href="{{ route('annonces.animaux.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
+                                <a href="{{ route('annonce.animal.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-paw w-5 mr-3" style="color: var(--color-primary);"></i> Animaux
                                 </a>
-                                <a href="{{ route('annonces.escrements.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
+                                <a href="{{ route('annonce.escrement.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-leaf w-5 mr-3" style="color: var(--color-primary);"></i> Escrements / Fumier
                                 </a>
-                                <a href="{{ route('annonces.aliments.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
+                                <a href="{{ route('annonce.aliment.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-apple-alt w-5 mr-3" style="color: var(--color-primary);"></i> Aliment / Provende
                                 </a>
-                                <a href="{{ route('annonces.accessoires.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
+                                <a href="{{ route('annonce.accessoire.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-tools w-5 mr-3" style="color: var(--color-primary);"></i> Accessoires
                                 </a>
                                 <div class="border-t my-1" style="border-color: var(--color-nav-border);"></div>
-                                <a href="#" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
+                                <!-- Lien vers toutes les annonces -->
+                                <a href="{{ route('annonce.all.index') }}" class="flex items-center px-4 py-2.5 text-sm transition-colors" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'; this.style.color='var(--color-primary)'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-nav-text)'">
                                     <i class="fas fa-list w-5 mr-3" style="color: var(--color-primary);"></i> Toutes les annonces
                                 </a>
                             </div>
@@ -260,21 +261,30 @@
                     <i class="fas fa-chevron-down text-xs transition-transform" :class="{'rotate-180': open}" style="color: var(--color-nav-text);"></i>
                 </button>
                 <div x-show="open" x-collapse class="pl-6 space-y-1 mt-1">
-                    <a href="{{ route('annonces.animaux.index') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
+                    <a href="{{ route('annonce.animal.index') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
                         <i class="fas fa-paw w-5 mr-3" style="color: var(--color-primary);"></i> Animaux
                     </a>
-                    <a href="{{ route('annonces.escrements.index') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
+                    <a href="{{ route('annonce.escrement.index') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
                         <i class="fas fa-leaf w-5 mr-3" style="color: var(--color-primary);"></i> Escrements / Fumier
                     </a>
-                    <a href="{{ route('annonces.aliments.index') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
+                    <a href="{{ route('annonce.aliment.index') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
                         <i class="fas fa-apple-alt w-5 mr-3" style="color: var(--color-primary);"></i> Aliment / Provende
                     </a>
-                    <a href="{{ route('annonces.accessoires.index') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
+                    <a href="{{ route('annonce.accessoire.index') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
                         <i class="fas fa-tools w-5 mr-3" style="color: var(--color-primary);"></i> Accessoires
                     </a>
-                    <a href="#" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
+                    <div class="border-t my-1" style="border-color: var(--color-nav-border);"></div>
+                    <!-- Lien vers toutes les annonces -->
+                    <a href="{{ route('annonce.all.index') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
                         <i class="fas fa-list w-5 mr-3" style="color: var(--color-primary);"></i> Toutes les annonces
                     </a>
+                    
+                    @auth
+                        <div class="border-t my-1" style="border-color: var(--color-nav-border);"></div>
+                        <a href="{{ route('annonce.animal.mes-annonces') }}" class="flex items-center py-2 px-3 rounded-lg transition" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
+                            <i class="fas fa-box w-5 mr-3" style="color: var(--color-primary);"></i> Mes annonces
+                        </a>
+                    @endauth
                 </div>
             </div>
             
@@ -311,11 +321,21 @@
                         {{ $unreadCount > 9 ? '9+' : $unreadCount }}
                     </span>
                 </a>
+                
+                <!-- Points de fidélité mobile -->
+                <a href="{{ route('recompenses.index') }}" class="flex items-center py-3 px-3 rounded-lg transition font-medium" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
+                    <i class="fas fa-gem w-5 mr-3" style="color: var(--color-primary);"></i> Mes points
+                </a>
             @else
                 <a href="{{ route('login') }}" class="flex items-center py-3 px-3 rounded-lg transition font-medium" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
                     <i class="fas fa-tachometer-alt w-5 mr-3" style="color: var(--color-primary);"></i> Dashboard
                 </a>
             @endauth
+            
+            <!-- FAQ mobile -->
+            <a href="{{ route('faq') }}" class="flex items-center py-3 px-3 rounded-lg transition font-medium" style="color: var(--color-nav-text);" onmouseover="this.style.backgroundColor='#F3F4F6'" onmouseout="this.style.backgroundColor='transparent'">
+                <i class="fas fa-question-circle w-5 mr-3" style="color: var(--color-primary);"></i> Aide / FAQ
+            </a>
         </div>
     </div>
 </nav>

@@ -4,7 +4,7 @@
     icon="tools"
     badge="🔧 Équipements"
     :items="$annoncesAccessoires"
-    route="{{ route('annonces.accessoires.index') }}"
+    route="{{ route('annonce.accessoire.index') }}"
     routeText="Voir tous les accessoires"
     type="annonce"
     bgColor="#f0ede4"
